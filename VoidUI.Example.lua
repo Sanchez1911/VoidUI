@@ -38,9 +38,9 @@ local VoidUI = loadLib()
 local Window = VoidUI:CreateWindow({
     Title = "voidw0rld",
     Author = "discord.gg/voidw0rld",
-    Icon = "turtle",
-    Accent = Color3.fromRGB(192, 255, 62),
-    Size = UDim2.fromOffset(640, 500),
+    Icon = "lucide:origami",
+    Accent = Color3.fromRGB(198, 255, 71),
+    Size = UDim2.fromOffset(660, 520),
     Transparent = true,
     ToggleKey = Enum.KeyCode.RightShift,
     Folder = "VoidUI_Demo",
@@ -49,7 +49,7 @@ local Window = VoidUI:CreateWindow({
 ---------------------------------------------------------------------------
 -- Sidebar: Home (2-col Training / Auto)
 ---------------------------------------------------------------------------
-local Home = Window:Tab({ Title = "Home", Icon = "home", Selected = true })
+local Home = Window:Tab({ Title = "Home", Icon = "lucide:house", Selected = true })
 local HomePage = Home:Page({ Title = "Home", Columns = 2 })
 
 do
@@ -164,7 +164,7 @@ end
 ---------------------------------------------------------------------------
 -- Sidebar: Farming (subtabs Farming / Skill / Priority Farm)
 ---------------------------------------------------------------------------
-local Farm = Window:Tab({ Title = "Farming", Icon = "sword" })
+local Farm = Window:Tab({ Title = "Farming", Icon = "lucide:swords" })
 
 local pageFarming = Farm:Page({ Title = "Farming" })
 local pageSkill = Farm:Page({ Title = "Skill" })
@@ -320,22 +320,22 @@ end
 ---------------------------------------------------------------------------
 -- More sidebar tabs (visual only)
 ---------------------------------------------------------------------------
-local Misc = Window:Tab({ Title = "Misc", Icon = "dice" })
+local Misc = Window:Tab({ Title = "Misc", Icon = "lucide:dices" })
 Misc:Section({ Title = "MISC" }):Paragraph({
     Title = "Ready",
-    Content = "เพิ่ม Section / Toggle / Slider ได้ตามใจ — API เหมือน WindUI แบบย่อ",
+    Content = "Icons = Lucide / Geist / Craft — ใช้แบบ lucide:swords หรือ geist:window",
 })
 
-Window:Tab({ Title = "Inventory", Icon = "backpack" })
+Window:Tab({ Title = "Inventory", Icon = "lucide:backpack" })
     :Section({ Title = "BAG" })
     :Button({
         Title = "Notify test",
         Callback = function()
-            VoidUI:Notify({ Title = "VoidUI", Content = "Library ready 🔥", Duration = 3 })
+            VoidUI:Notify({ Title = "VoidUI", Content = "Library ready", Duration = 3 })
         end,
     })
 
-Window:Tab({ Title = "Travel", Icon = "compass" })
+Window:Tab({ Title = "Travel", Icon = "lucide:compass" })
     :Section({ Title = "TP" })
     :Dropdown({
         Title = "Island",
@@ -344,7 +344,7 @@ Window:Tab({ Title = "Travel", Icon = "compass" })
         Callback = function(v) print("tp", v) end,
     })
 
-local Settings = Window:Tab({ Title = "Settings", Icon = "gear" })
+local Settings = Window:Tab({ Title = "Settings", Icon = "lucide:settings" })
 local setSec = Settings:Section({ Title = "CONFIG" })
 setSec:Button({
     Title = "Save config",

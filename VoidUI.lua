@@ -16,7 +16,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.0.0",
+    Version = "1.2.0",
     _windows = {},
 }
 
@@ -69,70 +69,171 @@ local function tween(obj, info, props)
 end
 
 ---------------------------------------------------------------------------
--- Icons (simple lucide-ish glyph map via unicode / rbxasset)
--- Prefer Image when rbxassetid given; else TextLabel glyph
+-- Icons — Lucide / Geist / Craft (Footagesus/Icons, same as WindUI)
+-- Usage: "swords" | "lucide:swords" | "geist:window" | "craft:macbook-stroke"
+--        or raw "rbxassetid://..."
 ---------------------------------------------------------------------------
-local Icons = {
-    home = "⌂",
-    house = "⌂",
-    sword = "⚔",
-    swords = "⚔",
-    dice = "⚄",
-    backpack = "🎒",
-    bag = "🎒",
-    expand = "⤢",
-    compass = "◎",
-    wrench = "🔧",
-    settings = "⚙",
-    gear = "⚙",
-    leaf = "☘",
-    plant = "☘",
-    cart = "🛒",
-    shop = "🛒",
-    piggy = "🐷",
-    money = "💰",
-    mail = "✉",
-    moon = "☾",
-    key = "🔑",
-    keys = "🔑",
-    cloud = "☁",
-    star = "★",
-    user = "☺",
-    search = "⌕",
-    close = "✕",
-    minimize = "–",
-    chevron = "▾",
-    check = "✓",
-    info = "ℹ",
-    warn = "⚠",
-    plus = "+",
-    minus = "−",
-    play = "▶",
-    pause = "❚❚",
-    robot = "⚙",
-    turtle = "🐢",
-    target = "◎",
-    flame = "🔥",
-    bolt = "⚡",
-    eye = "👁",
-    lock = "🔒",
-    unlock = "🔓",
-    server = "▦",
-    code = "</>",
-    list = "☰",
-    grid = "▦",
+local ICON_CDN = {
+    lucide = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/lucide/dist/Icons.lua",
+    craft = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/craft/dist/Icons.lua",
+    geist = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/geist/dist/Icons.lua",
+    solar = "https://raw.githubusercontent.com/Footagesus/Icons/refs/heads/main/solar/dist/Icons.lua",
 }
 
-local function resolveIcon(name)
-    if not name or name == "" then return nil, nil end
-    if typeof(name) == "string" then
-        if name:find("rbxasset", 1, true) or name:find("http", 1, true) then
-            return name, nil
+local IconPacks = {}
+local IconAlias = {
+    home = "house",
+    sword = "swords",
+    bag = "backpack",
+    gear = "settings",
+    plant = "leaf",
+    cart = "shopping-cart",
+    shop = "shopping-cart",
+    piggy = "piggy-bank",
+    money = "coins",
+    keys = "key",
+    robot = "bot",
+    turtle = "origami",
+    chevron = "chevron-down",
+    close = "x",
+    minimize = "minus",
+    search = "search",
+    warn = "triangle-alert",
+    check = "check",
+    info = "info",
+    dice = "dices",
+    expand = "maximize-2",
+    target = "crosshair",
+    flame = "flame",
+    bolt = "zap",
+    eye = "eye",
+    lock = "lock",
+    unlock = "lock-open",
+    server = "server",
+    code = "code",
+    list = "list",
+    grid = "layout-grid",
+    user = "user",
+    star = "star",
+    play = "play",
+    pause = "pause",
+    plus = "plus",
+    minus = "minus",
+}
+
+local function httpGet(url)
+    local ok, body = pcall(function()
+        if type(game.HttpGetAsync) == "function" then
+            return game:HttpGetAsync(url)
         end
-        local g = Icons[string.lower(name)]
-        return nil, g or name
+        return game:HttpGet(url)
+    end)
+    if ok and type(body) == "string" and #body > 50 and body:sub(1, 1) ~= "<" then
+        return body
     end
-    return nil, tostring(name)
+    return nil
+end
+
+local function loadIconPack(pack)
+    pack = string.lower(pack or "lucide")
+    if IconPacks[pack] then return IconPacks[pack] end
+    local url = ICON_CDN[pack]
+    if not url then return nil end
+    local src = httpGet(url)
+    if not src then return nil end
+    local fn = (loadstring or load)(src, "@Icons-" .. pack)
+    if not fn then return nil end
+    local ok, data = pcall(fn)
+    if ok and type(data) == "table" then
+        IconPacks[pack] = data
+        return data
+    end
+    return nil
+end
+
+-- returns rbxassetid string or nil
+local function resolveIcon(name)
+    if not name or name == "" then return nil end
+    if typeof(name) ~= "string" then
+        name = tostring(name)
+    end
+    if name:find("rbxasset", 1, true) or name:find("http", 1, true) then
+        return name
+    end
+
+    local pack, iconName = "lucide", name
+    local colon = name:find(":", 1, true)
+    if colon then
+        pack = string.lower(name:sub(1, colon - 1))
+        iconName = name:sub(colon + 1)
+    else
+        iconName = IconAlias[string.lower(name)] or string.lower(name)
+    end
+
+    local set = loadIconPack(pack)
+    if not set then
+        -- fallback lucide
+        if pack ~= "lucide" then
+            set = loadIconPack("lucide")
+            iconName = IconAlias[string.lower(iconName)] or iconName
+        end
+    end
+    if not set then return nil end
+
+    local id = set[iconName] or set[IconAlias[iconName]]
+    if type(id) == "string" then return id end
+    if type(id) == "number" then return "rbxassetid://" .. tostring(id) end
+    if type(id) == "table" and id.Image then
+        local img = id.Image
+        if type(img) == "number" then return "rbxassetid://" .. tostring(img) end
+        return img
+    end
+    return nil
+end
+
+local function makeIcon(parent, iconName, size, color, z)
+    size = size or 18
+    local asset = resolveIcon(iconName)
+    local holder = Instance.new("Frame")
+    holder.BackgroundTransparency = 1
+    holder.Size = UDim2.fromOffset(size, size)
+    holder.Parent = parent
+
+    local img
+    if asset then
+        img = Instance.new("ImageLabel")
+        img.BackgroundTransparency = 1
+        img.Image = asset
+        img.ImageColor3 = color or Theme.TextDim
+        img.ScaleType = Enum.ScaleType.Fit
+        img.Size = UDim2.fromScale(1, 1)
+        img.ZIndex = z or 2
+        img.Parent = holder
+        holder:SetAttribute("IsIcon", true)
+        return holder, img
+    end
+    local dot = Instance.new("Frame")
+    dot.BackgroundColor3 = color or Theme.TextDim
+    dot.BackgroundTransparency = 0.45
+    dot.AnchorPoint = Vector2.new(0.5, 0.5)
+    dot.Position = UDim2.fromScale(0.5, 0.5)
+    dot.Size = UDim2.fromOffset(math.max(4, math.floor(size * 0.28)), math.max(4, math.floor(size * 0.28)))
+    dot.Parent = holder
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(1, 0)
+    c.Parent = dot
+    return holder, nil
+end
+
+local function setIconColor(iconImg, color)
+    if iconImg and iconImg:IsA("ImageLabel") then
+        iconImg.ImageColor3 = color
+    end
+end
+
+VoidUI.ResolveIcon = resolveIcon
+VoidUI.SetIconPack = function(_, pack)
+    loadIconPack(pack)
 end
 
 ---------------------------------------------------------------------------
@@ -325,11 +426,14 @@ end
 ---------------------------------------------------------------------------
 function VoidUI:CreateWindow(cfg)
     cfg = cfg or {}
+    -- load lucide pack once (cached) so sidebar icons aren't blank on first paint
+    loadIconPack("lucide")
+
     local accent = cfg.Accent or Theme.Accent
     local title = cfg.Title or "VoidUI"
     local author = cfg.Author or cfg.Subtitle or ""
-    local iconAsset, iconGlyph = resolveIcon(cfg.Icon or "turtle")
-    local size = cfg.Size or UDim2.fromOffset(620, 480)
+    local logoIcon = cfg.Icon or "lucide:origami"
+    local size = cfg.Size or UDim2.fromOffset(660, 520)
     local toggleKey = cfg.ToggleKey or Enum.KeyCode.RightShift
     local folder = cfg.Folder -- optional config folder name
 
@@ -355,12 +459,12 @@ function VoidUI:CreateWindow(cfg)
         BackgroundTransparency = 1,
         Image = "rbxassetid://6014261993",
         ImageColor3 = Color3.new(0, 0, 0),
-        ImageTransparency = 0.45,
+        ImageTransparency = 0.35,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = Rect.new(49, 49, 450, 450),
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.new(size.X.Scale, size.X.Offset + 40, size.Y.Scale, size.Y.Offset + 40),
+        Size = UDim2.new(size.X.Scale, size.X.Offset + 56, size.Y.Scale, size.Y.Offset + 56),
         ZIndex = 0,
         Parent = screen,
     })
@@ -368,74 +472,74 @@ function VoidUI:CreateWindow(cfg)
     local main = mk("Frame", {
         Name = "Main",
         BackgroundColor3 = T.Bg,
-        BackgroundTransparency = cfg.Transparent and 0.08 or 0,
+        BackgroundTransparency = cfg.Transparent and 0.04 or 0,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
         Size = size,
         ClipsDescendants = true,
         Parent = screen,
     })
-    corner(main, 16)
-    stroke(main, T.Stroke, 1, 0.35)
+    corner(main, 18)
+    stroke(main, T.Stroke, 1, 0.2)
 
     -- Sidebar
-    local sidebarW = 56
+    local sidebarW = 64
     local sidebar = mk("Frame", {
         Name = "Sidebar",
         BackgroundColor3 = T.BgSidebar,
-        BackgroundTransparency = 0.15,
+        BackgroundTransparency = 0,
         Size = UDim2.new(0, sidebarW, 1, 0),
         BorderSizePixel = 0,
         Parent = main,
     })
-    stroke(sidebar, T.Stroke, 1, 0.5)
+    mk("Frame", {
+        BackgroundColor3 = T.Stroke,
+        BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.fromScale(1, 0),
+        Size = UDim2.new(0, 1, 1, 0),
+        BackgroundTransparency = 0.35,
+        Parent = sidebar,
+    })
 
     local logo = mk("Frame", {
         Name = "Logo",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 56),
+        Size = UDim2.new(1, 0, 0, 64),
         Parent = sidebar,
     })
-
-    if iconAsset then
-        mk("ImageLabel", {
-            BackgroundTransparency = 1,
-            Image = iconAsset,
-            ImageColor3 = accent,
-            Size = UDim2.fromOffset(28, 28),
-            Position = UDim2.new(0.5, -14, 0.5, -14),
-            Parent = logo,
-        })
-    else
-        mk("TextLabel", {
-            BackgroundTransparency = 1,
-            Text = iconGlyph or "🐢",
-            TextSize = 22,
-            Font = Fonts.Title,
-            TextColor3 = accent,
-            Size = UDim2.fromScale(1, 1),
-            Parent = logo,
-        })
-    end
+    local logoBg = mk("Frame", {
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.88,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromOffset(40, 40),
+        Parent = logo,
+    })
+    corner(logoBg, 12)
+    local logoHolder, logoImg = makeIcon(logoBg, logoIcon, 22, accent, 2)
+    logoHolder.AnchorPoint = Vector2.new(0.5, 0.5)
+    logoHolder.Position = UDim2.fromScale(0.5, 0.5)
 
     local sideNav = mk("ScrollingFrame", {
         Name = "Nav",
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Position = UDim2.fromOffset(0, 56),
-        Size = UDim2.new(1, 0, 1, -56),
+        Position = UDim2.fromOffset(0, 64),
+        Size = UDim2.new(1, 0, 1, -64),
         ScrollBarThickness = 0,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         Parent = sidebar,
     })
-    list(sideNav, Enum.FillDirection.Vertical, 4, Enum.HorizontalAlignment.Center)
-    pad(sideNav, 4, 0, 12, 0)
+    list(sideNav, Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center)
+    pad(sideNav, 2, 0, 14, 0)
 
     -- Content shell
     local content = mk("Frame", {
         Name = "Content",
-        BackgroundTransparency = 1,
+        BackgroundColor3 = T.BgPanel,
+        BackgroundTransparency = 0.55,
         Position = UDim2.fromOffset(sidebarW, 0),
         Size = UDim2.new(1, -sidebarW, 1, 0),
         ClipsDescendants = true,
@@ -446,15 +550,15 @@ function VoidUI:CreateWindow(cfg)
     local topBar = mk("Frame", {
         Name = "TopBar",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 44),
+        Size = UDim2.new(1, 0, 0, 52),
         Parent = content,
     })
-    pad(topBar, 0, 12, 0, 16)
+    pad(topBar, 0, 14, 0, 18)
 
     local titleLbl = mk("TextLabel", {
         BackgroundTransparency = 1,
         Font = Fonts.Title,
-        TextSize = 15,
+        TextSize = 16,
         TextColor3 = T.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
         Text = title,
@@ -466,44 +570,46 @@ function VoidUI:CreateWindow(cfg)
         mk("TextLabel", {
             BackgroundTransparency = 1,
             Font = Fonts.Desc,
-            TextSize = 11,
+            TextSize = 12,
             TextColor3 = T.TextMute,
             TextXAlignment = Enum.TextXAlignment.Left,
             Text = author,
-            Position = UDim2.fromOffset(0, 22),
+            Position = UDim2.fromOffset(0, 26),
             Size = UDim2.new(0.55, 0, 0, 14),
             Parent = topBar,
         })
-        titleLbl.Size = UDim2.new(0.55, 0, 0, 22)
-        titleLbl.Position = UDim2.fromOffset(0, 4)
+        titleLbl.Size = UDim2.new(0.55, 0, 0, 24)
+        titleLbl.Position = UDim2.fromOffset(0, 6)
     end
 
     local winBtns = mk("Frame", {
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -4, 0.5, 0),
-        Size = UDim2.fromOffset(72, 28),
+        Size = UDim2.fromOffset(72, 30),
         Parent = topBar,
     })
-    list(winBtns, Enum.FillDirection.Horizontal, 6, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
+    list(winBtns, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
 
-    local function winBtn(glyph, cb)
+    local function winBtn(iconName, cb)
         local b = mk("TextButton", {
             BackgroundColor3 = T.BgInput,
-            BackgroundTransparency = 0.3,
-            Text = glyph,
-            TextColor3 = T.TextDim,
-            TextSize = 14,
-            Font = Fonts.Body,
-            Size = UDim2.fromOffset(28, 28),
+            BackgroundTransparency = 0.15,
+            Text = "",
+            Size = UDim2.fromOffset(30, 30),
             AutoButtonColor = false,
             Parent = winBtns,
         })
-        corner(b, 8)
+        corner(b, 9)
+        local h, img = makeIcon(b, iconName, 14, T.TextDim, 2)
+        h.AnchorPoint = Vector2.new(0.5, 0.5)
+        h.Position = UDim2.fromScale(0.5, 0.5)
         hover(b, function()
-            tween(b, TI(0.12), { BackgroundColor3 = T.BgHover, TextColor3 = T.Text })
+            tween(b, TI(0.12), { BackgroundColor3 = T.BgHover })
+            setIconColor(img, T.Text)
         end, function()
-            tween(b, TI(0.12), { BackgroundColor3 = T.BgInput, TextColor3 = T.TextDim })
+            tween(b, TI(0.12), { BackgroundColor3 = T.BgInput })
+            setIconColor(img, T.TextDim)
         end)
         b.MouseButton1Click:Connect(cb)
         return b
@@ -513,12 +619,12 @@ function VoidUI:CreateWindow(cfg)
     local subTabBar = mk("Frame", {
         Name = "SubTabs",
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, 44),
+        Position = UDim2.fromOffset(0, 52),
         Size = UDim2.new(1, 0, 0, 36),
         Visible = false,
         Parent = content,
     })
-    pad(subTabBar, 0, 16, 0, 16)
+    pad(subTabBar, 0, 18, 0, 18)
     local subTabList = mk("Frame", {
         BackgroundTransparency = 1,
         Size = UDim2.fromScale(1, 1),
@@ -530,8 +636,8 @@ function VoidUI:CreateWindow(cfg)
     local pages = mk("Frame", {
         Name = "Pages",
         BackgroundTransparency = 1,
-        Position = UDim2.fromOffset(0, 44),
-        Size = UDim2.new(1, 0, 1, -44),
+        Position = UDim2.fromOffset(0, 52),
+        Size = UDim2.new(1, 0, 1, -52),
         ClipsDescendants = true,
         Parent = content,
     })
@@ -578,12 +684,12 @@ function VoidUI:CreateWindow(cfg)
     local function setPagesOffset(hasSub)
         if hasSub then
             subTabBar.Visible = true
-            pages.Position = UDim2.fromOffset(0, 80)
-            pages.Size = UDim2.new(1, 0, 1, -80)
+            pages.Position = UDim2.fromOffset(0, 88)
+            pages.Size = UDim2.new(1, 0, 1, -88)
         else
             subTabBar.Visible = false
-            pages.Position = UDim2.fromOffset(0, 44)
-            pages.Size = UDim2.new(1, 0, 1, -44)
+            pages.Position = UDim2.fromOffset(0, 52)
+            pages.Size = UDim2.new(1, 0, 1, -52)
         end
     end
 
@@ -654,11 +760,11 @@ function VoidUI:CreateWindow(cfg)
         end
     end
 
-    winBtn("–", function()
+    winBtn("lucide:minus", function()
         Window:SetVisible(false)
         VoidUI:Notify({ Title = title, Content = "Hidden — press toggle key to show", Duration = 2 })
     end)
-    winBtn("✕", function()
+    winBtn("lucide:x", function()
         Window:Destroy()
     end)
 
@@ -676,14 +782,14 @@ function VoidUI:CreateWindow(cfg)
     function Window:Tab(opts)
         opts = opts or {}
         local tabTitle = opts.Title or "Tab"
-        local img, glyph = resolveIcon(opts.Icon or "home")
+        local tabIcon = opts.Icon or "lucide:house"
         local selected = opts.Selected
 
         local btn = mk("TextButton", {
             Name = "Tab_" .. tabTitle,
             BackgroundTransparency = 1,
             Text = "",
-            Size = UDim2.fromOffset(44, 44),
+            Size = UDim2.fromOffset(48, 48),
             AutoButtonColor = false,
             Parent = sideNav,
         })
@@ -692,7 +798,7 @@ function VoidUI:CreateWindow(cfg)
             BackgroundColor3 = accent,
             BorderSizePixel = 0,
             AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 0, 0.5, 0),
+            Position = UDim2.new(0, 2, 0.5, 0),
             Size = UDim2.fromOffset(3, 0),
             Parent = btn,
         })
@@ -703,32 +809,14 @@ function VoidUI:CreateWindow(cfg)
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(38, 38),
+            Size = UDim2.fromOffset(40, 40),
             Parent = btn,
         })
-        corner(iconBg, 11)
+        corner(iconBg, 12)
 
-        local iconLbl
-        if img then
-            iconLbl = mk("ImageLabel", {
-                BackgroundTransparency = 1,
-                Image = img,
-                ImageColor3 = T.TextDim,
-                Size = UDim2.fromOffset(20, 20),
-                Position = UDim2.new(0.5, -10, 0.5, -10),
-                Parent = iconBg,
-            })
-        else
-            iconLbl = mk("TextLabel", {
-                BackgroundTransparency = 1,
-                Text = glyph or "•",
-                TextSize = 17,
-                Font = Fonts.Body,
-                TextColor3 = T.TextDim,
-                Size = UDim2.fromScale(1, 1),
-                Parent = iconBg,
-            })
-        end
+        local iconHolder, iconLbl = makeIcon(iconBg, tabIcon, 20, T.TextDim, 2)
+        iconHolder.AnchorPoint = Vector2.new(0.5, 0.5)
+        iconHolder.Position = UDim2.fromScale(0.5, 0.5)
 
         local pageHost = mk("Frame", {
             Name = "TabHost_" .. tabTitle,
@@ -751,20 +839,17 @@ function VoidUI:CreateWindow(cfg)
         function Tab:_setActive(on)
             pageHost.Visible = on
             if on then
-                tween(indicator, TI(0.18, Enum.EasingStyle.Quart), { Size = UDim2.fromOffset(3, 24) })
+                tween(indicator, TI(0.18, Enum.EasingStyle.Quart), { Size = UDim2.fromOffset(3, 22) })
                 tween(iconBg, TI(0.18), { BackgroundTransparency = 0 })
-                if iconLbl:IsA("ImageLabel") then
+                setIconColor(iconLbl, darkIcon)
+                if iconLbl then
                     tween(iconLbl, TI(0.18), { ImageColor3 = darkIcon })
-                else
-                    tween(iconLbl, TI(0.18), { TextColor3 = darkIcon })
                 end
             else
                 tween(indicator, TI(0.18), { Size = UDim2.fromOffset(3, 0) })
                 tween(iconBg, TI(0.18), { BackgroundTransparency = 1 })
-                if iconLbl:IsA("ImageLabel") then
+                if iconLbl then
                     tween(iconLbl, TI(0.18), { ImageColor3 = T.TextDim })
-                else
-                    tween(iconLbl, TI(0.18), { TextColor3 = T.TextDim })
                 end
             end
         end
@@ -1242,20 +1327,12 @@ function VoidUI:CreateWindow(cfg)
                         TextTruncate = Enum.TextTruncate.AtEnd,
                         Text = labelText(),
                         Position = UDim2.fromOffset(10, 0),
-                        Size = UDim2.new(1, -28, 1, 0),
+                        Size = UDim2.new(1, -32, 1, 0),
                         Parent = box,
                     })
-                    mk("TextLabel", {
-                        BackgroundTransparency = 1,
-                        Text = "▾",
-                        TextColor3 = T.TextDim,
-                        TextSize = 12,
-                        Font = Fonts.Body,
-                        AnchorPoint = Vector2.new(1, 0.5),
-                        Position = UDim2.new(1, -8, 0.5, 0),
-                        Size = UDim2.fromOffset(14, 14),
-                        Parent = box,
-                    })
+                    local chevHolder = makeIcon(box, "lucide:chevron-down", 14, T.TextDim, 2)
+                    chevHolder.AnchorPoint = Vector2.new(1, 0.5)
+                    chevHolder.Position = UDim2.new(1, -8, 0.5, 0)
 
                     local open = false
                     local menu
