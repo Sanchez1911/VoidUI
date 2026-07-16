@@ -1,5 +1,5 @@
 --[[
-    VoidUI — voidw0rld style (purple glass + bloom)
+    VoidUI — voidw0rld style (glass + header bloom)
     Usage:
       local VoidUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua"))()
 
@@ -9,6 +9,7 @@
         Transparency=0.16, Bloom=true, OpenButton=true, CornerRadius=26,
         ToggleKey=Enum.KeyCode.G,
       })
+      -- Bloom = accent glow on titles/headers (not outer window glow)
       local T = W:Tab({ Title="Farm", Icon="lucide:swords" })
       local S = T:Section({ Title="AUTOMATION" })
       S:Toggle / Slider / Dropdown / Button / Input / Keybind / Paragraph
@@ -16,7 +17,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.5.1",
+    Version = "1.5.2",
     _windows = {},
 }
 
@@ -277,6 +278,71 @@ local function stroke(parent, color, thick, trans)
     return s
 end
 
+-- Soft text bloom (accent glow behind glyphs — not a window halo)
+local function bloomLabel(opts)
+    local parent = opts.Parent
+    local text = opts.Text or ""
+    local size = opts.TextSize or 13
+    local font = opts.Font or Fonts.Title
+    local color = opts.Color or Theme.Text
+    local accent = opts.Accent or Theme.Accent
+    local align = opts.TextXAlignment or Enum.TextXAlignment.Left
+    local height = opts.Height or (size + 4)
+    local bloom = opts.Bloom ~= false
+    local layoutOrder = opts.LayoutOrder
+
+    local wrap = mk("Frame", {
+        Name = opts.Name or "BloomText",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, height),
+        LayoutOrder = layoutOrder,
+        Parent = parent,
+    })
+
+    if bloom then
+        for _, layer in ipairs({
+            { Transparency = 0.88, Offset = UDim2.fromOffset(0, 1) },
+            { Transparency = 0.78, Offset = UDim2.fromOffset(0, 0) },
+            { Transparency = 0.70, Offset = UDim2.fromOffset(0, -1) },
+        }) do
+            mk("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = font,
+                TextSize = size + 1,
+                TextColor3 = accent,
+                TextTransparency = layer.Transparency,
+                TextXAlignment = align,
+                Text = text,
+                Size = UDim2.fromScale(1, 1),
+                Position = layer.Offset,
+                ZIndex = 1,
+                Parent = wrap,
+            })
+        end
+    end
+
+    local label = mk("TextLabel", {
+        BackgroundTransparency = 1,
+        Font = font,
+        TextSize = size,
+        TextColor3 = color,
+        TextXAlignment = align,
+        Text = text,
+        Size = UDim2.fromScale(1, 1),
+        ZIndex = 2,
+        Parent = wrap,
+    })
+    if bloom then
+        local g = Instance.new("UIStroke")
+        g.Color = accent
+        g.Thickness = 1.15
+        g.Transparency = 0.62
+        g.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+        g.Parent = label
+    end
+    return wrap, label
+end
+
 local function pad(parent, t, r, b, l)
     local p = Instance.new("UIPadding")
     p.PaddingTop = UDim.new(0, t or 0)
@@ -462,38 +528,21 @@ function VoidUI:CreateWindow(cfg)
     screen.IgnoreGuiInset = true
     protect(screen)
 
-    -- Drop shadow + soft bloom glow
+    -- Soft black drop shadow only (no purple window bloom)
     local shadow = mk("ImageLabel", {
         Name = "Shadow",
         BackgroundTransparency = 1,
         Image = "rbxassetid://6014261993",
-        ImageColor3 = bloomOn and accent or Color3.new(0, 0, 0),
-        ImageTransparency = bloomOn and 0.68 or 0.4,
+        ImageColor3 = Color3.new(0, 0, 0),
+        ImageTransparency = 0.52,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = Rect.new(49, 49, 450, 450),
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.new(size.X.Scale, size.X.Offset + (bloomOn and 78 or 64), size.Y.Scale, size.Y.Offset + (bloomOn and 78 or 64)),
+        Size = UDim2.new(size.X.Scale, size.X.Offset + 52, size.Y.Scale, size.Y.Offset + 52),
         ZIndex = 0,
         Parent = screen,
     })
-    local bloomHalo = nil
-    if bloomOn then
-        bloomHalo = mk("ImageLabel", {
-            Name = "BloomHalo",
-            BackgroundTransparency = 1,
-            Image = "rbxassetid://6014261993",
-            ImageColor3 = accent,
-            ImageTransparency = 0.82,
-            ScaleType = Enum.ScaleType.Slice,
-            SliceCenter = Rect.new(49, 49, 450, 450),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.new(size.X.Scale, size.X.Offset + 110, size.Y.Scale, size.Y.Offset + 110),
-            ZIndex = 0,
-            Parent = screen,
-        })
-    end
 
     -- CanvasGroup clips children to rounded corners (fixes sharp left sidebar)
     local main = Instance.new("CanvasGroup")
@@ -507,9 +556,7 @@ function VoidUI:CreateWindow(cfg)
     main.ZIndex = 1
     main.Parent = screen
     corner(main, cornerR)
-
-    -- bloom rim
-    stroke(main, bloomOn and accent or T.Stroke, bloomOn and 1.6 or 1, bloomOn and 0.42 or 0.55)
+    stroke(main, T.Stroke, 1, 0.58)
 
     -- Sidebar
     local sidebarW = 66
@@ -577,16 +624,23 @@ function VoidUI:CreateWindow(cfg)
     })
     pad(topBar, 0, 16, 0, 20)
 
-    local titleLbl = mk("TextLabel", {
+    local titleHost = mk("Frame", {
         BackgroundTransparency = 1,
-        Font = Fonts.Title,
-        TextSize = 17,
-        TextColor3 = T.Text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Text = title,
-        Size = UDim2.new(0.55, 0, 1, 0),
+        Size = UDim2.new(0.62, 0, 1, 0),
         Parent = topBar,
     })
+    local titleWrap = bloomLabel({
+        Parent = titleHost,
+        Name = "Title",
+        Text = title,
+        TextSize = 18,
+        Font = Fonts.Title,
+        Color = Color3.fromRGB(248, 244, 255),
+        Accent = accent,
+        Bloom = bloomOn,
+        Height = 24,
+    })
+    titleWrap.Position = UDim2.fromOffset(0, author ~= "" and 6 or 16)
 
     if author ~= "" then
         mk("TextLabel", {
@@ -596,12 +650,10 @@ function VoidUI:CreateWindow(cfg)
             TextColor3 = T.TextMute,
             TextXAlignment = Enum.TextXAlignment.Left,
             Text = author,
-            Position = UDim2.fromOffset(0, 28),
-            Size = UDim2.new(0.55, 0, 0, 14),
-            Parent = topBar,
+            Position = UDim2.fromOffset(0, 32),
+            Size = UDim2.new(1, 0, 0, 14),
+            Parent = titleHost,
         })
-        titleLbl.Size = UDim2.new(0.55, 0, 0, 26)
-        titleLbl.Position = UDim2.fromOffset(0, 6)
     end
 
     -- thin hairline under header
@@ -697,7 +749,6 @@ function VoidUI:CreateWindow(cfg)
             local np = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             main.Position = np
             shadow.Position = np
-            if bloomHalo then bloomHalo.Position = np end
         end
     end)
 
@@ -732,7 +783,6 @@ function VoidUI:CreateWindow(cfg)
         self.Visible = v and true or false
         main.Visible = self.Visible
         shadow.Visible = self.Visible
-        if bloomHalo then bloomHalo.Visible = self.Visible end
         if self._openBtn then
             -- floating icon stays for mobile reopen when hidden
             self._openBtn.Visible = true
@@ -854,7 +904,7 @@ function VoidUI:CreateWindow(cfg)
             Parent = screen,
         })
         corner(ob, 16)
-        stroke(ob, Color3.new(1, 1, 1), 1, 0.75)
+        stroke(ob, bloomOn and accent or Color3.new(1, 1, 1), bloomOn and 1.35 or 1, bloomOn and 0.4 or 0.75)
         local oh = makeIcon(ob, logoIsAsset and logoIcon or "lucide:layout-dashboard", logoIsAsset and 28 or 22, Color3.new(1, 1, 1), 51)
         oh.AnchorPoint = Vector2.new(0.5, 0.5)
         oh.Position = UDim2.fromScale(0.5, 0.5)
@@ -1082,32 +1132,47 @@ function VoidUI:CreateWindow(cfg)
                     AutomaticSize = Enum.AutomaticSize.Y,
                     Parent = parentCol,
                 })
-                list(wrap, Enum.FillDirection.Vertical, 10)
+                list(wrap, Enum.FillDirection.Vertical, 8)
 
-                mk("TextLabel", {
+                local headRow = mk("Frame", {
                     BackgroundTransparency = 1,
-                    Font = Fonts.Title,
-                    TextSize = 13,
-                    TextColor3 = Color3.fromRGB(210, 198, 235),
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    Text = string.upper(secTitle),
-                    Size = UDim2.new(1, 0, 0, 16),
+                    Size = UDim2.new(1, 0, 0, 18),
                     Parent = wrap,
                 })
+                bloomLabel({
+                    Parent = headRow,
+                    Name = "SectionTitle",
+                    Text = string.upper(secTitle),
+                    TextSize = 13,
+                    Font = Fonts.Title,
+                    Color = Color3.fromRGB(236, 228, 255),
+                    Accent = accent,
+                    Bloom = bloomOn,
+                    Height = 18,
+                })
+                -- accent tick under header when bloom on
+                if bloomOn then
+                    local tick = mk("Frame", {
+                        BackgroundColor3 = accent,
+                        BackgroundTransparency = 0.35,
+                        BorderSizePixel = 0,
+                        AnchorPoint = Vector2.new(0, 1),
+                        Position = UDim2.new(0, 0, 1, 1),
+                        Size = UDim2.fromOffset(18, 2),
+                        Parent = headRow,
+                    })
+                    corner(tick, 1)
+                end
 
                 local card = mk("Frame", {
                     BackgroundColor3 = T.BgSection,
-                    BackgroundTransparency = math.clamp(0.12 + glass * 0.35, 0.1, 0.4),
+                    BackgroundTransparency = math.clamp(0.1 + glass * 0.4, 0.08, 0.42),
                     Size = UDim2.new(1, 0, 0, 0),
                     AutomaticSize = Enum.AutomaticSize.Y,
                     Parent = wrap,
                 })
-                corner(card, 18)
-                stroke(card, bloomOn and Color3.fromRGB(
-                    math.floor(accent.R * 255 * 0.55 + T.Stroke.R * 255 * 0.45),
-                    math.floor(accent.G * 255 * 0.55 + T.Stroke.G * 255 * 0.45),
-                    math.floor(accent.B * 255 * 0.55 + T.Stroke.B * 255 * 0.45)
-                ) or T.Stroke, 1, bloomOn and 0.55 or 0.4)
+                corner(card, 16)
+                stroke(card, T.Stroke, 1, 0.48)
                 pad(card, 1, 2, 1, 2)
                 list(card, Enum.FillDirection.Vertical, 0)
 
