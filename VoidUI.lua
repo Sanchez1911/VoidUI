@@ -17,7 +17,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.5.5",
+    Version = "1.5.5", -- bloomLabel-after-mk fix
     _windows = {},
 }
 

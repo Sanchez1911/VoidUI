@@ -1,18 +1,21 @@
 --[[
-    VoidUI Example — เลย์เอาต์ตามสกรีน Cascade/WindUI (dark + lime)
-    รันบน executor: loadstring(readfile("path/to/VoidUI.Example.lua"))()
-    หรือแก้ path ด้านล่างให้ชี้ไปที่ VoidUI.lua
+    VoidUI Example — voidw0rld demo
+    รันบน executor — ใช้ SHA ตรงๆ กัน cache เก่า
 ]]
 
--- HttpGet (แนะนำ) — ไม่พึ่ง readfile
--- cache-bust เมื่ออัป version (executor มัก cache raw เก่า)
-local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua?v=1.5.5"
+-- HARD cache-bust: pin commit SHA (query ?v= อย่างเดียวไม่พอบน executor หลายตัว)
+local VOIDUI_SHA = "93fc250f0c4f7dd7300deda96e76556ec54db152"
+local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/" .. VOIDUI_SHA .. "/VoidUI.lua"
 
 local function loadLib()
     local ok, body = pcall(function()
         return game:HttpGet(VOIDUI_URL)
     end)
     if ok and type(body) == "string" and #body > 500 then
+        -- reject stale builds that still have bloomLabel-before-mk bug signature
+        if body:find("Soft text bloom %(accent glow", 1, true) and not body:find("after mk", 1, true) then
+            error("VoidUI stale cache — reopen with SHA URL")
+        end
         local fn, err = loadstring(body, "@VoidUI")
         if fn then
             local ok2, lib = pcall(fn)
@@ -35,6 +38,7 @@ local function loadLib()
 end
 
 local VoidUI = loadLib()
+print("[VoidUI] loaded", VoidUI.Version, "sha", VOIDUI_SHA)
 
 local Window = VoidUI:CreateWindow({
     Title = "voidw0rld",
