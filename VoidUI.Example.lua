@@ -6,7 +6,7 @@
 
 -- HttpGet (แนะนำ) — ไม่พึ่ง readfile
 -- cache-bust เมื่ออัป version (executor มัก cache raw เก่า)
-local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua?v=1.3.0"
+local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua?v=1.3.1"
 
 local function loadLib()
     local ok, body = pcall(function()
@@ -43,7 +43,7 @@ local Window = VoidUI:CreateWindow({
     Accent = Color3.fromRGB(168, 85, 247), -- void purple
     Size = UDim2.fromOffset(680, 540),
     Transparent = true,
-    ToggleKey = Enum.KeyCode.RightShift,
+    ToggleKey = Enum.KeyCode.G,
     Folder = "VoidUI_Demo",
 })
 
@@ -366,13 +366,15 @@ setSec:Button({
 })
 setSec:Keybind({
     Title = "UI Toggle",
-    Desc = "Same as window ToggleKey (info only)",
-    Value = Enum.KeyCode.RightShift,
+    Desc = "Press to show / hide the hub",
+    Value = Enum.KeyCode.G,
+    WindowToggle = true,
+    Flag = "uiToggle",
 })
 
 VoidUI:Notify({
     Title = "VoidUI " .. VoidUI.Version,
-    Content = "RightShift = show/hide",
+    Content = "G = show/hide",
     Duration = 4,
 })
 

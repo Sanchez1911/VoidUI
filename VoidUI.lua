@@ -16,7 +16,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.3.0",
+    Version = "1.3.1",
     _windows = {},
 }
 
@@ -508,20 +508,10 @@ function VoidUI:CreateWindow(cfg)
         Size = UDim2.new(1, 0, 0, 64),
         Parent = sidebar,
     })
-    local logoBg = mk("Frame", {
-        BackgroundColor3 = accent,
-        BackgroundTransparency = 0.72,
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.fromOffset(42, 42),
-        Parent = logo,
-    })
-    corner(logoBg, 13)
-    stroke(logoBg, accent, 1, 0.55)
-    -- custom rbxasset logos keep natural colors (ImageColor white); lucide gets accent tint
+    -- no purple chip behind hub logo — keeps brand sharp
     local logoIsAsset = typeof(logoIcon) == "string" and (logoIcon:find("rbxasset", 1, true) or logoIcon:find("http", 1, true))
     local logoTint = logoIsAsset and Color3.new(1, 1, 1) or accent
-    local logoHolder = makeIcon(logoBg, logoIcon, logoIsAsset and 28 or 22, logoTint, 2)
+    local logoHolder = makeIcon(logo, logoIcon, logoIsAsset and 32 or 24, logoTint, 2)
     logoHolder.AnchorPoint = Vector2.new(0.5, 0.5)
     logoHolder.Position = UDim2.fromScale(0.5, 0.5)
 
@@ -539,11 +529,10 @@ function VoidUI:CreateWindow(cfg)
     list(sideNav, Enum.FillDirection.Vertical, 6, Enum.HorizontalAlignment.Center)
     pad(sideNav, 2, 0, 14, 0)
 
-    -- Content shell
+    -- Content shell (transparent so main corner radius fits clean — no bottom seam)
     local content = mk("Frame", {
         Name = "Content",
-        BackgroundColor3 = T.BgPanel,
-        BackgroundTransparency = 0.55,
+        BackgroundTransparency = 1,
         Position = UDim2.fromOffset(sidebarW, 0),
         Size = UDim2.new(1, -sidebarW, 1, 0),
         ClipsDescendants = true,
@@ -772,12 +761,23 @@ function VoidUI:CreateWindow(cfg)
         Window:Destroy()
     end)
 
-    -- Toggle key
-    UserInputService.InputBegan:Connect(function(input, gp)
-        if gp then return end
-        if input.KeyCode == toggleKey then
-            Window:Toggle()
+    -- Toggle key (mutable — Keybind can rebind via Window:SetToggleKey)
+    local toggleKeyState = toggleKey
+    function Window:SetToggleKey(key)
+        if typeof(key) == "EnumItem" then
+            toggleKeyState = key
         end
+    end
+    function Window:GetToggleKey()
+        return toggleKeyState
+    end
+
+    UserInputService.InputBegan:Connect(function(input, gp)
+        if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+        if input.KeyCode ~= toggleKeyState then return end
+        -- allow toggle even if gameProcessed (chat/menus often eat G); skip only when typing in a TextBox
+        if UserInputService:GetFocusedTextBox() then return end
+        Window:Toggle()
     end)
 
     ---------------------------------------------------------------------------
@@ -895,14 +895,15 @@ function VoidUI:CreateWindow(cfg)
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 Size = UDim2.fromScale(1, 1),
-                ScrollBarThickness = 3,
-                ScrollBarImageColor3 = accent,
+                ScrollBarThickness = 2,
+                ScrollBarImageColor3 = T.TextMute,
+                ScrollBarImageTransparency = 0.35,
                 CanvasSize = UDim2.new(0, 0, 0, 0),
                 AutomaticCanvasSize = Enum.AutomaticSize.Y,
                 Visible = false,
                 Parent = pageHost,
             })
-            pad(frame, 8, 16, 20, 16)
+            pad(frame, 10, 18, 28, 18)
 
             -- two-column optional layout container
             local body = mk("Frame", {
@@ -1367,33 +1368,44 @@ function VoidUI:CreateWindow(cfg)
                     local function openMenu()
                         if open then closeMenu() return end
                         open = true
-                        -- portal to Main so ScrollingFrame doesn't clip the list
+
                         local abs = box.AbsolutePosition
-                        local rootPos = main.AbsolutePosition
-                        local menuH = math.min(28 + #values * 30, 220)
-                        local menuW = math.max(box.AbsoluteSize.X, 160)
+                        local boxSz = box.AbsoluteSize
+                        local itemH = 30
+                        local padY = 12
+                        local menuH = math.min(padY + #values * itemH, 240)
+                        local menuW = math.max(boxSz.X, 168)
+
+                        -- open upward when near bottom so last items stay clickable
+                        local screenH = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 1080
+                        local spaceBelow = screenH - (abs.Y + boxSz.Y)
+                        local openUp = spaceBelow < (menuH + 12)
+                        local posX = abs.X + boxSz.X - menuW
+                        local posY = openUp and (abs.Y - menuH - 6) or (abs.Y + boxSz.Y + 6)
+                        posX = math.max(8, posX)
+                        posY = math.max(8, posY)
+
+                        -- parent to ScreenGui (not Main) — avoids ClipsDescendants eating bottom items
                         menu = mk("Frame", {
-                            BackgroundColor3 = T.BgPanel,
+                            BackgroundColor3 = T.BgSection,
                             BorderSizePixel = 0,
-                            Position = UDim2.fromOffset(
-                                abs.X - rootPos.X + box.AbsoluteSize.X - menuW,
-                                abs.Y - rootPos.Y + box.AbsoluteSize.Y + 6
-                            ),
+                            Position = UDim2.fromOffset(posX, posY),
                             Size = UDim2.fromOffset(menuW, menuH),
-                            ZIndex = 200,
-                            Parent = main,
+                            ZIndex = 500,
+                            Parent = screen,
                         })
                         corner(menu, 10)
-                        stroke(menu, T.Stroke, 1, 0.3)
+                        stroke(menu, accent, 1, 0.65)
                         local sc = mk("ScrollingFrame", {
                             BackgroundTransparency = 1,
                             BorderSizePixel = 0,
                             Size = UDim2.fromScale(1, 1),
                             ScrollBarThickness = 3,
-                            ScrollBarImageColor3 = accent,
+                            ScrollBarImageColor3 = T.TextMute,
                             CanvasSize = UDim2.new(0, 0, 0, 0),
                             AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                            ZIndex = 201,
+                            Active = true,
+                            ZIndex = 501,
                             Parent = menu,
                         })
                         pad(sc, 6, 6, 6, 6)
@@ -1402,11 +1414,12 @@ function VoidUI:CreateWindow(cfg)
                         for _, v in ipairs(values) do
                             local item = mk("TextButton", {
                                 BackgroundColor3 = isSelected(v) and accent or T.BgInput,
-                                BackgroundTransparency = isSelected(v) and 0.75 or 0.4,
+                                BackgroundTransparency = isSelected(v) and 0.55 or 0.25,
                                 AutoButtonColor = false,
+                                Active = true,
                                 Text = "",
                                 Size = UDim2.new(1, 0, 0, 28),
-                                ZIndex = 202,
+                                ZIndex = 502,
                                 Parent = sc,
                             })
                             corner(item, 7)
@@ -1414,12 +1427,12 @@ function VoidUI:CreateWindow(cfg)
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Body,
                                 TextSize = 12,
-                                TextColor3 = isSelected(v) and accent or T.Text,
+                                TextColor3 = isSelected(v) and Color3.new(1, 1, 1) or T.Text,
                                 TextXAlignment = Enum.TextXAlignment.Left,
                                 Text = tostring(v),
                                 Size = UDim2.new(1, -12, 1, 0),
                                 Position = UDim2.fromOffset(10, 0),
-                                ZIndex = 203,
+                                ZIndex = 503,
                                 Parent = item,
                             })
                             item.MouseButton1Click:Connect(function()
@@ -1588,9 +1601,16 @@ function VoidUI:CreateWindow(cfg)
                         key = k
                         api.Value = k
                         box.Text = (k and k.Name) or "None"
+                        if o.WindowToggle and Window.SetToggleKey then
+                            Window:SetToggleKey(k)
+                        end
                         if not silent and o.Callback then task.spawn(o.Callback, k) end
                     end
                     api.Set = function(_, k, silent) setKey(k, silent) end
+
+                    if o.WindowToggle and Window.SetToggleKey then
+                        Window:SetToggleKey(key)
+                    end
 
                     box.MouseButton1Click:Connect(function()
                         listening = true
@@ -1607,7 +1627,12 @@ function VoidUI:CreateWindow(cfg)
                             else
                                 setKey(input.KeyCode)
                             end
-                        elseif not gp and not listening and key and key ~= Enum.KeyCode.Unknown and input.KeyCode == key then
+                            return
+                        end
+                        -- Window toggle is handled by Window listener — don't double-fire Pressed
+                        if o.WindowToggle then return end
+                        if UserInputService:GetFocusedTextBox() then return end
+                        if not listening and key and key ~= Enum.KeyCode.Unknown and input.KeyCode == key then
                             if o.Pressed then task.spawn(o.Pressed) end
                         end
                     end)
