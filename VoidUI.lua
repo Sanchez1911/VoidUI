@@ -2,8 +2,7 @@
     VoidUI — WindUI / Cascade style library
     Dark + lime · sidebar · tabs · toggle/slider/dropdown/input/keybind/button
     Usage:
-      local VoidUI = loadstring(game:HttpGet("https://files.catbox.moe/zef1lz.lua"))()
-      -- หรือ raw GitHub หลัง push แล้ว
+      local VoidUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua"))()
 
     API sketch:
       local W = VoidUI:CreateWindow({ Title=..., Icon=..., Accent=..., ToggleKey=Enum.KeyCode.RightShift })
