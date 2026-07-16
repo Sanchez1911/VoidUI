@@ -17,7 +17,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.5.4",
+    Version = "1.5.5",
     _windows = {},
 }
 
@@ -278,58 +278,6 @@ local function stroke(parent, color, thick, trans)
     return s
 end
 
--- Soft text bloom (accent glow behind glyphs — not a window halo)
-local function bloomLabel(opts)
-    local parent = opts.Parent
-    local text = opts.Text or ""
-    local size = opts.TextSize or 13
-    local font = opts.Font or Fonts.Title
-    local color = opts.Color or Theme.Text
-    local accent = opts.Accent or Theme.Accent
-    local align = opts.TextXAlignment or Enum.TextXAlignment.Left
-    local height = opts.Height or (size + 4)
-    local bloom = opts.Bloom ~= false
-    local layoutOrder = opts.LayoutOrder
-
-    local wrap = mk("Frame", {
-        Name = opts.Name or "BloomText",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, height),
-        LayoutOrder = layoutOrder,
-        Parent = parent,
-    })
-
-    if bloom then
-        -- soft glyph wash only — no purple outline (keeps UI clean)
-        mk("TextLabel", {
-            BackgroundTransparency = 1,
-            Font = font,
-            TextSize = size,
-            TextColor3 = accent,
-            TextTransparency = 0.78,
-            TextXAlignment = align,
-            Text = text,
-            Size = UDim2.fromScale(1, 1),
-            Position = UDim2.fromOffset(0, 0),
-            ZIndex = 1,
-            Parent = wrap,
-        })
-    end
-
-    local label = mk("TextLabel", {
-        BackgroundTransparency = 1,
-        Font = font,
-        TextSize = size,
-        TextColor3 = color,
-        TextXAlignment = align,
-        Text = text,
-        Size = UDim2.fromScale(1, 1),
-        ZIndex = 2,
-        Parent = wrap,
-    })
-    return wrap, label
-end
-
 local function pad(parent, t, r, b, l)
     local p = Instance.new("UIPadding")
     p.PaddingTop = UDim.new(0, t or 0)
@@ -367,6 +315,57 @@ local function mk(class, props, children)
         i.Parent = props.Parent
     end
     return i
+end
+
+-- Soft text bloom (after mk — locals aren't visible before declaration)
+local function bloomLabel(opts)
+    local parent = opts.Parent
+    local text = opts.Text or ""
+    local size = opts.TextSize or 13
+    local font = opts.Font or Fonts.Title
+    local color = opts.Color or Theme.Text
+    local accent = opts.Accent or Theme.Accent
+    local align = opts.TextXAlignment or Enum.TextXAlignment.Left
+    local height = opts.Height or (size + 4)
+    local bloom = opts.Bloom ~= false
+    local layoutOrder = opts.LayoutOrder
+
+    local wrap = mk("Frame", {
+        Name = opts.Name or "BloomText",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, height),
+        LayoutOrder = layoutOrder,
+        Parent = parent,
+    })
+
+    if bloom then
+        mk("TextLabel", {
+            BackgroundTransparency = 1,
+            Font = font,
+            TextSize = size,
+            TextColor3 = accent,
+            TextTransparency = 0.78,
+            TextXAlignment = align,
+            Text = text,
+            Size = UDim2.fromScale(1, 1),
+            Position = UDim2.fromOffset(0, 0),
+            ZIndex = 1,
+            Parent = wrap,
+        })
+    end
+
+    local label = mk("TextLabel", {
+        BackgroundTransparency = 1,
+        Font = font,
+        TextSize = size,
+        TextColor3 = color,
+        TextXAlignment = align,
+        Text = text,
+        Size = UDim2.fromScale(1, 1),
+        ZIndex = 2,
+        Parent = wrap,
+    })
+    return wrap, label
 end
 
 local function hover(btn, onEnter, onLeave)
