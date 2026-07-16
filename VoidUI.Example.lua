@@ -5,7 +5,7 @@
 ]]
 
 -- HttpGet (แนะนำ) — ไม่พึ่ง readfile
-local VOIDUI_URL = "https://files.catbox.moe/73yvcm.lua"
+local VOIDUI_URL = "https://files.catbox.moe/zef1lz.lua"
 
 local function loadLib()
     local ok, body = pcall(function()
