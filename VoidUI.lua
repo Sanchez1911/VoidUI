@@ -16,7 +16,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.4.2",
+    Version = "1.5.0",
     _windows = {},
 }
 
@@ -437,6 +437,14 @@ function VoidUI:CreateWindow(cfg)
     local size = cfg.Size or UDim2.fromOffset(720, 560)
     local toggleKey = cfg.ToggleKey or Enum.KeyCode.RightShift
     local folder = cfg.Folder -- optional config folder name
+    local glass = cfg.Transparency
+    if glass == nil then
+        glass = (cfg.Transparent == false) and 0.02 or 0.14
+    end
+    glass = math.clamp(tonumber(glass) or 0.14, 0, 0.6)
+    local bloomOn = cfg.Bloom ~= false
+    local wantOpenBtn = cfg.OpenButton ~= false
+    local cornerR = cfg.CornerRadius or 26
 
     -- deep copy theme overrides
     local T = {}
@@ -454,52 +462,55 @@ function VoidUI:CreateWindow(cfg)
     screen.IgnoreGuiInset = true
     protect(screen)
 
-    -- Drop shadow
+    -- Drop shadow (soft)
     local shadow = mk("ImageLabel", {
         Name = "Shadow",
         BackgroundTransparency = 1,
         Image = "rbxassetid://6014261993",
-        ImageColor3 = Color3.new(0, 0, 0),
-        ImageTransparency = 0.35,
+        ImageColor3 = bloomOn and accent or Color3.new(0, 0, 0),
+        ImageTransparency = bloomOn and 0.72 or 0.4,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = Rect.new(49, 49, 450, 450),
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.new(size.X.Scale, size.X.Offset + 56, size.Y.Scale, size.Y.Offset + 56),
+        Size = UDim2.new(size.X.Scale, size.X.Offset + 64, size.Y.Scale, size.Y.Offset + 64),
         ZIndex = 0,
         Parent = screen,
     })
 
-    local main = mk("Frame", {
-        Name = "Main",
-        BackgroundColor3 = T.Bg,
-        BackgroundTransparency = cfg.Transparent and 0.04 or 0,
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.fromScale(0.5, 0.5),
-        Size = size,
-        ClipsDescendants = true,
-        Parent = screen,
-    })
-    corner(main, 24)
-    stroke(main, Color3.fromRGB(96, 64, 150), 1, 0.62)
+    -- CanvasGroup clips children to rounded corners (fixes sharp left sidebar)
+    local main = Instance.new("CanvasGroup")
+    main.Name = "Main"
+    main.BackgroundColor3 = T.Bg
+    main.BackgroundTransparency = glass
+    main.BorderSizePixel = 0
+    main.AnchorPoint = Vector2.new(0.5, 0.5)
+    main.Position = UDim2.fromScale(0.5, 0.5)
+    main.Size = size
+    main.ZIndex = 1
+    main.Parent = screen
+    corner(main, cornerR)
+
+    -- bloom rim
+    stroke(main, bloomOn and accent or T.Stroke, bloomOn and 1.6 or 1, bloomOn and 0.42 or 0.55)
 
     -- Sidebar
-    local sidebarW = 68
+    local sidebarW = 66
     local sidebar = mk("Frame", {
         Name = "Sidebar",
         BackgroundColor3 = T.BgSidebar,
-        BackgroundTransparency = 0,
+        BackgroundTransparency = math.clamp(glass * 0.55, 0, 0.35),
         Size = UDim2.new(0, sidebarW, 1, 0),
         BorderSizePixel = 0,
         Parent = main,
     })
     mk("Frame", {
-        BackgroundColor3 = T.Stroke,
+        BackgroundColor3 = accent,
         BorderSizePixel = 0,
         AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.fromScale(1, 0),
         Size = UDim2.new(0, 1, 1, 0),
-        BackgroundTransparency = 0.45,
+        BackgroundTransparency = 0.78,
         Parent = sidebar,
     })
 
@@ -684,6 +695,7 @@ function VoidUI:CreateWindow(cfg)
         _activeTab = nil,
         _flags = {},
         Visible = true,
+        _openBtn = nil,
     }
 
     local function setPagesOffset(hasSub)
@@ -700,11 +712,28 @@ function VoidUI:CreateWindow(cfg)
 
     function Window:SetVisible(v)
         self.Visible = v and true or false
-        screen.Enabled = self.Visible
+        main.Visible = self.Visible
+        shadow.Visible = self.Visible
+        if self._openBtn then
+            -- floating icon stays for mobile reopen when hidden
+            self._openBtn.Visible = true
+            if self.Visible then
+                tween(self._openBtn, TI(0.15), { BackgroundTransparency = 0.35 })
+            else
+                tween(self._openBtn, TI(0.15), { BackgroundTransparency = 0.05 })
+            end
+        end
     end
 
     function Window:Toggle()
         self:SetVisible(not self.Visible)
+    end
+
+    function Window:SetTransparency(amount)
+        amount = math.clamp(tonumber(amount) or glass, 0, 0.6)
+        glass = amount
+        main.BackgroundTransparency = amount
+        sidebar.BackgroundTransparency = math.clamp(amount * 0.55, 0, 0.35)
     end
 
     function Window:Destroy()
@@ -787,10 +816,64 @@ function VoidUI:CreateWindow(cfg)
     UserInputService.InputBegan:Connect(function(input, gp)
         if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
         if input.KeyCode ~= toggleKeyState then return end
-        -- allow toggle even if gameProcessed (chat/menus often eat G); skip only when typing in a TextBox
         if UserInputService:GetFocusedTextBox() then return end
         Window:Toggle()
     end)
+
+    -- Floating open/close icon (mobile-friendly)
+    if wantOpenBtn then
+        local ob = mk("TextButton", {
+            Name = "OpenButton",
+            BackgroundColor3 = accent,
+            BackgroundTransparency = 0.35,
+            Text = "",
+            AutoButtonColor = false,
+            AnchorPoint = Vector2.new(0, 1),
+            Position = UDim2.new(0, 18, 1, -18),
+            Size = UDim2.fromOffset(52, 52),
+            ZIndex = 50,
+            Parent = screen,
+        })
+        corner(ob, 16)
+        stroke(ob, Color3.new(1, 1, 1), 1, 0.75)
+        local oh = makeIcon(ob, logoIsAsset and logoIcon or "lucide:layout-dashboard", logoIsAsset and 28 or 22, Color3.new(1, 1, 1), 51)
+        oh.AnchorPoint = Vector2.new(0.5, 0.5)
+        oh.Position = UDim2.fromScale(0.5, 0.5)
+
+        -- drag open button
+        local draggingOb, d0, p0
+        ob.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                draggingOb = true
+                d0 = input.Position
+                p0 = ob.Position
+                input.Changed:Connect(function()
+                    if input.UserInputState == Enum.UserInputState.End then
+                        draggingOb = false
+                    end
+                end)
+            end
+        end)
+        UserInputService.InputChanged:Connect(function(input)
+            if draggingOb and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local d = input.Position - d0
+                ob.Position = UDim2.new(p0.X.Scale, p0.X.Offset + d.X, p0.Y.Scale, p0.Y.Offset + d.Y)
+            end
+        end)
+
+        local moved = false
+        ob.InputChanged:Connect(function(input)
+            if draggingOb and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                if (input.Position - d0).Magnitude > 6 then moved = true end
+            end
+        end)
+        ob.MouseButton1Click:Connect(function()
+            if moved then moved = false return end
+            Window:Toggle()
+        end)
+
+        Window._openBtn = ob
+    end
 
     ---------------------------------------------------------------------------
     -- Tab (sidebar entry)
@@ -919,8 +1002,8 @@ function VoidUI:CreateWindow(cfg)
             local body = mk("Frame", {
                 Name = "Body",
                 BackgroundTransparency = 1,
-                Position = UDim2.fromOffset(20, 12),
-                Size = UDim2.new(1, -40, 0, 0),
+                Position = UDim2.fromOffset(14, 10),
+                Size = UDim2.new(1, -28, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
                 Parent = frame,
             })
@@ -995,14 +1078,18 @@ function VoidUI:CreateWindow(cfg)
 
                 local card = mk("Frame", {
                     BackgroundColor3 = T.BgSection,
-                    BackgroundTransparency = 0.08,
+                    BackgroundTransparency = math.clamp(0.12 + glass * 0.35, 0.1, 0.4),
                     Size = UDim2.new(1, 0, 0, 0),
                     AutomaticSize = Enum.AutomaticSize.Y,
                     Parent = wrap,
                 })
-                corner(card, 20)
-                stroke(card, T.Stroke, 1, 0.4)
-                pad(card, 8, 10, 8, 10)
+                corner(card, 18)
+                stroke(card, bloomOn and Color3.fromRGB(
+                    math.floor(accent.R * 255 * 0.55 + T.Stroke.R * 255 * 0.45),
+                    math.floor(accent.G * 255 * 0.55 + T.Stroke.G * 255 * 0.45),
+                    math.floor(accent.B * 255 * 0.55 + T.Stroke.B * 255 * 0.45)
+                ) or T.Stroke, 1, bloomOn and 0.55 or 0.4)
+                pad(card, 2, 4, 2, 4)
                 list(card, Enum.FillDirection.Vertical, 0)
 
                 local Section = { Frame = card, Title = secTitle }
@@ -1023,7 +1110,7 @@ function VoidUI:CreateWindow(cfg)
                         BorderSizePixel = 0,
                         AnchorPoint = Vector2.new(0.5, 0.5),
                         Position = UDim2.fromScale(0.5, 0.5),
-                        Size = UDim2.new(1, -12, 0, 1),
+                        Size = UDim2.new(1, -6, 0, 1),
                         Parent = d,
                     })
                 end
@@ -1042,7 +1129,7 @@ function VoidUI:CreateWindow(cfg)
                         Parent = card,
                     })
                     row:SetAttribute("_bt", 1)
-                    pad(row, 13, 12, 13, 14)
+                    pad(row, 8, 8, 8, 10)
 
                     -- subtle hover highlight over the whole row
                     local hitBg = mk("Frame", {
@@ -1052,9 +1139,9 @@ function VoidUI:CreateWindow(cfg)
                         ZIndex = 0,
                         Parent = row,
                     })
-                    corner(hitBg, 12)
+                    corner(hitBg, 10)
                     row.MouseEnter:Connect(function()
-                        tween(hitBg, TI(0.12), { BackgroundTransparency = 0.72 })
+                        tween(hitBg, TI(0.12), { BackgroundTransparency = 0.78 })
                     end)
                     row.MouseLeave:Connect(function()
                         tween(hitBg, TI(0.12), { BackgroundTransparency = 1 })
@@ -1062,11 +1149,11 @@ function VoidUI:CreateWindow(cfg)
 
                     local left = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(1, -138, 0, 0),
+                        Size = UDim2.new(1, -124, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
                         Parent = row,
                     })
-                    list(left, Enum.FillDirection.Vertical, 3)
+                    list(left, Enum.FillDirection.Vertical, 2)
 
                     mk("TextLabel", {
                         BackgroundTransparency = 1,
@@ -1175,8 +1262,8 @@ function VoidUI:CreateWindow(cfg)
                         LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    pad(row, 12, 12, 12, 14)
-                    list(row, Enum.FillDirection.Vertical, 8)
+                    pad(row, 8, 8, 8, 10)
+                    list(row, Enum.FillDirection.Vertical, 6)
 
                     local top = mk("Frame", {
                         BackgroundTransparency = 1,
