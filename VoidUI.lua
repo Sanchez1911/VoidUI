@@ -16,7 +16,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.4.0",
+    Version = "1.4.1",
     _windows = {},
 }
 
@@ -984,12 +984,12 @@ function VoidUI:CreateWindow(cfg)
 
                 mk("TextLabel", {
                     BackgroundTransparency = 1,
-                    Font = Fonts.Body,
-                    TextSize = 11,
-                    TextColor3 = T.TextMute,
+                    Font = Fonts.Title,
+                    TextSize = 12,
+                    TextColor3 = Color3.fromRGB(200, 188, 230),
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Text = string.upper(secTitle),
-                    Size = UDim2.new(1, 0, 0, 14),
+                    Size = UDim2.new(1, 0, 0, 16),
                     Parent = wrap,
                 })
 
@@ -1083,8 +1083,8 @@ function VoidUI:CreateWindow(cfg)
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
-                            TextSize = 11,
-                            TextColor3 = T.TextDim,
+                            TextSize = 12,
+                            TextColor3 = Color3.fromRGB(186, 176, 208),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextWrapped = true,
                             Text = descText,
@@ -1211,8 +1211,8 @@ function VoidUI:CreateWindow(cfg)
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
-                            TextSize = 11,
-                            TextColor3 = T.TextDim,
+                            TextSize = 12,
+                            TextColor3 = Color3.fromRGB(186, 176, 208),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextYAlignment = Enum.TextYAlignment.Top,
                             TextWrapped = true,
@@ -1690,8 +1690,8 @@ function VoidUI:CreateWindow(cfg)
                     local body = mk("TextLabel", {
                         BackgroundTransparency = 1,
                         Font = Fonts.Desc,
-                        TextSize = 12,
-                        TextColor3 = T.TextDim,
+                        TextSize = 13,
+                        TextColor3 = Color3.fromRGB(186, 176, 208),
                         TextXAlignment = Enum.TextXAlignment.Left,
                         TextYAlignment = Enum.TextYAlignment.Top,
                         TextWrapped = true,
