@@ -14,7 +14,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.6.0", -- search + button icons
+    Version = "1.6.1",
     _windows = {},
 }
 
@@ -620,7 +620,7 @@ function VoidUI:CreateWindow(cfg)
 
     local titleHost = mk("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(wantSearch and 0.38 or 0.62, 0, 1, 0),
+        Size = UDim2.new(wantSearch and 0.48 or 0.62, 0, 1, 0),
         Parent = topBar,
     })
     local titleWrap = bloomLabel({
@@ -670,35 +670,136 @@ function VoidUI:CreateWindow(cfg)
     })
     list(winBtns, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
 
-    -- Search field (filters options by title/desc; jumps tab if needed)
+    -- Search: compact icon → expands into a clean find field
     local searchBox
+    local searchHost
+    local searchExpanded = false
+    local setSearchOpen
+    local searchCountLbl
     if wantSearch then
-        local searchHost = mk("Frame", {
+        searchHost = mk("Frame", {
             Name = "SearchHost",
-            BackgroundColor3 = Color3.fromRGB(22, 18, 30),
+            BackgroundColor3 = Color3.fromRGB(18, 15, 26),
+            BackgroundTransparency = 0.08,
             AnchorPoint = Vector2.new(1, 0.5),
             Position = UDim2.new(1, -88, 0.5, 0),
-            Size = UDim2.fromOffset(200, 32),
+            Size = UDim2.fromOffset(34, 34),
+            ClipsDescendants = true,
             Parent = topBar,
         })
-        corner(searchHost, 10)
-        stroke(searchHost, Color3.fromRGB(48, 46, 58), 1, 0.55)
-        local sIcon = makeIcon(searchHost, "lucide:search", 14, T.TextMute, 2)
-        sIcon.Position = UDim2.fromOffset(10, 9)
+        corner(searchHost, 17)
+        local searchStroke = stroke(searchHost, Color3.fromRGB(55, 50, 68), 1, 0.5)
+
+        local sIconHold = makeIcon(searchHost, "lucide:search", 15, T.TextMute, 3)
+        sIconHold.AnchorPoint = Vector2.new(0, 0.5)
+        sIconHold.Position = UDim2.new(0, 9, 0.5, 0)
+        sIconHold.ZIndex = 3
+
         searchBox = mk("TextBox", {
             BackgroundTransparency = 1,
             Font = Fonts.Body,
             TextSize = 12,
             TextColor3 = T.Text,
-            PlaceholderText = "Search...",
+            PlaceholderText = "Find options…",
             PlaceholderColor3 = T.TextMute,
             Text = "",
             ClearTextOnFocus = false,
-            Position = UDim2.fromOffset(30, 0),
-            Size = UDim2.new(1, -38, 1, 0),
+            Visible = false,
+            Position = UDim2.fromOffset(32, 0),
+            Size = UDim2.new(1, -58, 1, 0),
             TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 3,
             Parent = searchHost,
         })
+
+        local clearBtn = mk("TextButton", {
+            BackgroundTransparency = 1,
+            Text = "",
+            Visible = false,
+            AutoButtonColor = false,
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -6, 0.5, 0),
+            Size = UDim2.fromOffset(22, 22),
+            ZIndex = 4,
+            Parent = searchHost,
+        })
+        local clearIcon = makeIcon(clearBtn, "lucide:x", 12, T.TextMute, 5)
+        clearIcon.AnchorPoint = Vector2.new(0.5, 0.5)
+        clearIcon.Position = UDim2.fromScale(0.5, 0.5)
+
+        searchCountLbl = mk("TextLabel", {
+            BackgroundTransparency = 1,
+            Font = Fonts.Body,
+            TextSize = 10,
+            TextColor3 = accent,
+            Text = "",
+            Visible = false,
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -28, 0.5, 0),
+            Size = UDim2.fromOffset(28, 14),
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = 4,
+            Parent = searchHost,
+        })
+
+        local hitOpen = mk("TextButton", {
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            Size = UDim2.fromScale(1, 1),
+            ZIndex = 2,
+            Parent = searchHost,
+        })
+
+        setSearchOpen = function(on, focus)
+            searchExpanded = on
+            hitOpen.Visible = not on
+            if on then
+                tween(searchHost, TI(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                    Size = UDim2.fromOffset(228, 34),
+                })
+                searchStroke.Color = accent
+                searchStroke.Transparency = 0.55
+                searchBox.Visible = true
+                clearBtn.Visible = true
+                if focus then
+                    task.defer(function()
+                        searchBox:CaptureFocus()
+                    end)
+                end
+            else
+                searchBox.Text = ""
+                searchCountLbl.Visible = false
+                searchCountLbl.Text = ""
+                searchBox.Visible = false
+                clearBtn.Visible = false
+                tween(searchHost, TI(0.2, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+                    Size = UDim2.fromOffset(34, 34),
+                })
+                searchStroke.Color = Color3.fromRGB(55, 50, 68)
+                searchStroke.Transparency = 0.5
+            end
+        end
+
+        hitOpen.MouseButton1Click:Connect(function()
+            setSearchOpen(true, true)
+        end)
+
+        searchBox.Focused:Connect(function()
+            searchStroke.Color = accent
+            searchStroke.Transparency = 0.4
+        end)
+        searchBox.FocusLost:Connect(function()
+            if searchBox.Text == "" then
+                setSearchOpen(false, false)
+            else
+                searchStroke.Transparency = 0.55
+            end
+        end)
+        clearBtn.MouseButton1Click:Connect(function()
+            searchBox.Text = ""
+            setSearchOpen(false, false)
+        end)
     end
 
     local function winBtn(iconName, cb)
@@ -801,25 +902,39 @@ function VoidUI:CreateWindow(cfg)
 
         local wrapVis = {}
         local tabHits = {}
+        local matchN = 0
         for _, e in ipairs(Window._searchEntries) do
             local hit = (not searching) or (string.find(e.Text, query, 1, true) ~= nil)
             if e.Row and e.Row.Parent then
                 e.Row.Visible = hit
+                if hit and searching and e.Text ~= "" then
+                    matchN = matchN + 1
+                end
             end
             if e.Divider and e.Divider.Parent then
                 e.Divider.Visible = not searching
             end
             if e.Wrap then
                 wrapVis[e.Wrap] = wrapVis[e.Wrap] or false
-                if hit then wrapVis[e.Wrap] = true end
+                if hit and e.Row then wrapVis[e.Wrap] = true end
             end
-            if hit and e.Tab then
+            if hit and e.Tab and e.Row then
                 tabHits[e.Tab] = true
             end
         end
         for wrap, vis in pairs(wrapVis) do
             if wrap and wrap.Parent then
                 wrap.Visible = (not searching) or vis
+            end
+        end
+
+        if searchCountLbl then
+            if searching then
+                searchCountLbl.Text = tostring(matchN)
+                searchCountLbl.Visible = true
+            else
+                searchCountLbl.Text = ""
+                searchCountLbl.Visible = false
             end
         end
 
@@ -837,8 +952,12 @@ function VoidUI:CreateWindow(cfg)
     end
 
     function Window:Search(query)
+        query = tostring(query or "")
         if searchBox then
-            searchBox.Text = tostring(query or "")
+            if query ~= "" and setSearchOpen then
+                setSearchOpen(true, false)
+            end
+            searchBox.Text = query
         end
         applySearch(query)
     end
@@ -846,6 +965,20 @@ function VoidUI:CreateWindow(cfg)
     if searchBox then
         searchBox:GetPropertyChangedSignal("Text"):Connect(function()
             applySearch(searchBox.Text)
+        end)
+        -- / or Ctrl+F opens find
+        UserInputService.InputBegan:Connect(function(input, gp)
+            if gp then return end
+            if UserInputService:GetFocusedTextBox() then return end
+            local open = false
+            if input.KeyCode == Enum.KeyCode.Slash then
+                open = true
+            elseif input.KeyCode == Enum.KeyCode.F and (UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) or UserInputService:IsKeyDown(Enum.KeyCode.RightControl)) then
+                open = true
+            end
+            if open and setSearchOpen then
+                setSearchOpen(true, true)
+            end
         end)
     end
 
@@ -866,12 +999,9 @@ function VoidUI:CreateWindow(cfg)
         main.Visible = self.Visible
         shadow.Visible = self.Visible
         if self._openBtn then
-            -- floating icon stays for mobile reopen when hidden
             self._openBtn.Visible = true
-            if self.Visible then
-                tween(self._openBtn, TI(0.15), { BackgroundTransparency = 0.35 })
-            else
-                tween(self._openBtn, TI(0.15), { BackgroundTransparency = 0.05 })
+            if self._styleOpenOrb then
+                self._styleOpenOrb(self.Visible)
             end
         end
     end
@@ -971,33 +1101,91 @@ function VoidUI:CreateWindow(cfg)
         Window:Toggle()
     end)
 
-    -- Floating open/close icon (mobile-friendly)
+    -- Floating open/close orb (glass — not a flat purple brick)
     if wantOpenBtn then
-        local ob = mk("TextButton", {
-            Name = "OpenButton",
-            BackgroundColor3 = accent,
-            BackgroundTransparency = 0.35,
-            Text = "",
-            AutoButtonColor = false,
+        local obWrap = mk("Frame", {
+            Name = "OpenOrb",
+            BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0, 1),
             Position = UDim2.new(0, 18, 1, -18),
-            Size = UDim2.fromOffset(52, 52),
+            Size = UDim2.fromOffset(58, 58),
             ZIndex = 50,
             Parent = screen,
         })
-        corner(ob, 16)
-        stroke(ob, bloomOn and accent or Color3.new(1, 1, 1), bloomOn and 1.35 or 1, bloomOn and 0.4 or 0.75)
-        local oh = makeIcon(ob, logoIsAsset and logoIcon or "lucide:layout-dashboard", logoIsAsset and 28 or 22, Color3.new(1, 1, 1), 51)
+
+        local glow = mk("ImageLabel", {
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://6014261993",
+            ImageColor3 = accent,
+            ImageTransparency = 0.78,
+            ScaleType = Enum.ScaleType.Slice,
+            SliceCenter = Rect.new(49, 49, 450, 450),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(72, 72),
+            ZIndex = 49,
+            Parent = obWrap,
+        })
+
+        local ob = mk("TextButton", {
+            Name = "OpenButton",
+            BackgroundColor3 = Color3.fromRGB(16, 12, 24),
+            BackgroundTransparency = 0.12,
+            Text = "",
+            AutoButtonColor = false,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(48, 48),
+            ZIndex = 51,
+            Parent = obWrap,
+        })
+        corner(ob, 24)
+        local obStroke = stroke(ob, accent, 1.25, 0.45)
+
+        -- soft inner wash
+        local wash = mk("Frame", {
+            BackgroundColor3 = accent,
+            BackgroundTransparency = 0.88,
+            Size = UDim2.fromScale(1, 1),
+            ZIndex = 51,
+            Parent = ob,
+        })
+        corner(wash, 24)
+
+        local oh = makeIcon(ob, logoIsAsset and logoIcon or "lucide:layout-dashboard", logoIsAsset and 22 or 20, Color3.new(1, 1, 1), 52)
         oh.AnchorPoint = Vector2.new(0.5, 0.5)
         oh.Position = UDim2.fromScale(0.5, 0.5)
 
-        -- drag open button
+        local function styleOpenOrb(uiVisible)
+            if uiVisible then
+                tween(ob, TI(0.18), { BackgroundTransparency = 0.28, BackgroundColor3 = Color3.fromRGB(16, 12, 24) })
+                tween(glow, TI(0.18), { ImageTransparency = 0.86 })
+                tween(wash, TI(0.18), { BackgroundTransparency = 0.92 })
+                obStroke.Transparency = 0.62
+            else
+                tween(ob, TI(0.18), { BackgroundTransparency = 0.05, BackgroundColor3 = Color3.fromRGB(22, 14, 36) })
+                tween(glow, TI(0.18), { ImageTransparency = 0.62 })
+                tween(wash, TI(0.18), { BackgroundTransparency = 0.78 })
+                obStroke.Transparency = 0.35
+            end
+        end
+
+        hover(ob, function()
+            tween(ob, TI(0.12), { Size = UDim2.fromOffset(52, 52) })
+            tween(glow, TI(0.12), { ImageTransparency = 0.55, Size = UDim2.fromOffset(80, 80) })
+        end, function()
+            tween(ob, TI(0.12), { Size = UDim2.fromOffset(48, 48) })
+            tween(glow, TI(0.12), { Size = UDim2.fromOffset(72, 72) })
+            styleOpenOrb(Window.Visible)
+        end)
+
+        -- drag whole wrap
         local draggingOb, d0, p0
         ob.InputBegan:Connect(function(input)
             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 draggingOb = true
                 d0 = input.Position
-                p0 = ob.Position
+                p0 = obWrap.Position
                 input.Changed:Connect(function()
                     if input.UserInputState == Enum.UserInputState.End then
                         draggingOb = false
@@ -1008,7 +1196,7 @@ function VoidUI:CreateWindow(cfg)
         UserInputService.InputChanged:Connect(function(input)
             if draggingOb and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 local d = input.Position - d0
-                ob.Position = UDim2.new(p0.X.Scale, p0.X.Offset + d.X, p0.Y.Scale, p0.Y.Offset + d.Y)
+                obWrap.Position = UDim2.new(p0.X.Scale, p0.X.Offset + d.X, p0.Y.Scale, p0.Y.Offset + d.Y)
             end
         end)
 
@@ -1023,7 +1211,9 @@ function VoidUI:CreateWindow(cfg)
             Window:Toggle()
         end)
 
-        Window._openBtn = ob
+        Window._openBtn = obWrap
+        Window._styleOpenOrb = styleOpenOrb
+        styleOpenOrb(true)
     end
 
     ---------------------------------------------------------------------------
