@@ -35,22 +35,23 @@ local Mouse = LP:GetMouse()
 -- Theme
 ---------------------------------------------------------------------------
 local Theme = {
-    Accent = Color3.fromRGB(192, 255, 62),
-    AccentDim = Color3.fromRGB(140, 190, 40),
-    Bg = Color3.fromRGB(18, 18, 18),
-    BgPanel = Color3.fromRGB(22, 22, 22),
-    BgSidebar = Color3.fromRGB(14, 14, 14),
-    BgSection = Color3.fromRGB(28, 28, 28),
-    BgHover = Color3.fromRGB(36, 36, 36),
-    BgInput = Color3.fromRGB(32, 32, 32),
-    BgToggleOff = Color3.fromRGB(48, 48, 48),
-    Stroke = Color3.fromRGB(40, 40, 40),
-    Text = Color3.fromRGB(255, 255, 255),
-    TextDim = Color3.fromRGB(140, 140, 140),
-    TextMute = Color3.fromRGB(90, 90, 90),
+    Accent = Color3.fromRGB(198, 255, 71),
+    AccentDim = Color3.fromRGB(150, 200, 48),
+    Bg = Color3.fromRGB(16, 17, 16),
+    BgPanel = Color3.fromRGB(24, 25, 23),
+    BgSidebar = Color3.fromRGB(12, 13, 12),
+    BgSection = Color3.fromRGB(27, 28, 26),
+    BgHover = Color3.fromRGB(40, 42, 38),
+    BgInput = Color3.fromRGB(38, 40, 36),
+    BgToggleOff = Color3.fromRGB(52, 54, 50),
+    Stroke = Color3.fromRGB(48, 50, 46),
+    Divider = Color3.fromRGB(38, 40, 37),
+    Text = Color3.fromRGB(244, 246, 240),
+    TextDim = Color3.fromRGB(138, 142, 132),
+    TextMute = Color3.fromRGB(96, 100, 92),
     Shadow = Color3.fromRGB(0, 0, 0),
-    Danger = Color3.fromRGB(255, 80, 80),
-    Success = Color3.fromRGB(192, 255, 62),
+    Danger = Color3.fromRGB(255, 92, 88),
+    Success = Color3.fromRGB(198, 255, 71),
 }
 
 local Fonts = {
@@ -698,14 +699,14 @@ function VoidUI:CreateWindow(cfg)
         corner(indicator, 2)
 
         local iconBg = mk("Frame", {
-            BackgroundColor3 = T.BgHover,
+            BackgroundColor3 = accent,
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(36, 36),
+            Size = UDim2.fromOffset(38, 38),
             Parent = btn,
         })
-        corner(iconBg, 10)
+        corner(iconBg, 11)
 
         local iconLbl
         if img then
@@ -721,7 +722,7 @@ function VoidUI:CreateWindow(cfg)
             iconLbl = mk("TextLabel", {
                 BackgroundTransparency = 1,
                 Text = glyph or "•",
-                TextSize = 16,
+                TextSize = 17,
                 Font = Fonts.Body,
                 TextColor3 = T.TextDim,
                 Size = UDim2.fromScale(1, 1),
@@ -746,15 +747,16 @@ function VoidUI:CreateWindow(cfg)
             _window = Window,
         }
 
+        local darkIcon = Color3.fromRGB(18, 20, 14)
         function Tab:_setActive(on)
             pageHost.Visible = on
             if on then
-                tween(indicator, TI(0.18, Enum.EasingStyle.Quart), { Size = UDim2.fromOffset(3, 22) })
-                tween(iconBg, TI(0.18), { BackgroundTransparency = 0.55 })
+                tween(indicator, TI(0.18, Enum.EasingStyle.Quart), { Size = UDim2.fromOffset(3, 24) })
+                tween(iconBg, TI(0.18), { BackgroundTransparency = 0 })
                 if iconLbl:IsA("ImageLabel") then
-                    tween(iconLbl, TI(0.18), { ImageColor3 = accent })
+                    tween(iconLbl, TI(0.18), { ImageColor3 = darkIcon })
                 else
-                    tween(iconLbl, TI(0.18), { TextColor3 = accent })
+                    tween(iconLbl, TI(0.18), { TextColor3 = darkIcon })
                 end
             else
                 tween(indicator, TI(0.18), { Size = UDim2.fromOffset(3, 0) })
@@ -766,6 +768,18 @@ function VoidUI:CreateWindow(cfg)
                 end
             end
         end
+
+        btn.MouseEnter:Connect(function()
+            if not pageHost.Visible then
+                tween(iconBg, TI(0.12), { BackgroundColor3 = T.BgHover, BackgroundTransparency = 0 })
+            end
+        end)
+        btn.MouseLeave:Connect(function()
+            if not pageHost.Visible then
+                tween(iconBg, TI(0.12), { BackgroundTransparency = 1 })
+                iconBg.BackgroundColor3 = accent
+            end
+        end)
 
         function Tab:SelectPage(page)
             for _, p in ipairs(self._pages) do
@@ -876,30 +890,67 @@ function VoidUI:CreateWindow(cfg)
 
                 local card = mk("Frame", {
                     BackgroundColor3 = T.BgSection,
-                    BackgroundTransparency = 0.25,
+                    BackgroundTransparency = 0,
                     Size = UDim2.new(1, 0, 0, 0),
                     AutomaticSize = Enum.AutomaticSize.Y,
                     Parent = wrap,
                 })
-                corner(card, 12)
-                stroke(card, T.Stroke, 1, 0.55)
-                pad(card, 6, 10, 6, 10)
-                list(card, Enum.FillDirection.Vertical, 2)
+                corner(card, 14)
+                stroke(card, T.Stroke, 1, 0.25)
+                pad(card, 4, 6, 4, 6)
+                list(card, Enum.FillDirection.Vertical, 0)
 
                 local Section = { Frame = card, Title = secTitle }
+                local rowOrder = 0
 
+                -- thin separator between consecutive rows
+                local function addDivider()
+                    if rowOrder == 0 then return end
+                    rowOrder = rowOrder + 1
+                    local d = mk("Frame", {
+                        BackgroundTransparency = 1,
+                        Size = UDim2.new(1, 0, 0, 1),
+                        LayoutOrder = rowOrder,
+                        Parent = card,
+                    })
+                    mk("Frame", {
+                        BackgroundColor3 = T.Divider,
+                        BorderSizePixel = 0,
+                        AnchorPoint = Vector2.new(0.5, 0.5),
+                        Position = UDim2.fromScale(0.5, 0.5),
+                        Size = UDim2.new(1, -12, 0, 1),
+                        Parent = d,
+                    })
+                end
+
+                -- base row container: fixed comfortable height, left text + right control slot
                 local function makeRow(titleText, descText)
+                    addDivider()
+                    rowOrder = rowOrder + 1
                     local row = mk("Frame", {
+                        BackgroundColor3 = T.BgSection,
                         BackgroundTransparency = 1,
                         Size = UDim2.new(1, 0, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
+                        LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    pad(row, 10, 4, 10, 4)
+                    row:SetAttribute("_bt", 1)
+                    pad(row, 12, 12, 12, 14)
+
+                    -- subtle hover highlight over the whole row
+                    local hitBg = mk("Frame", {
+                        BackgroundColor3 = T.BgHover,
+                        BackgroundTransparency = 1,
+                        Size = UDim2.new(1, 0, 1, 0),
+                        ZIndex = 0,
+                        Parent = row,
+                    })
+                    corner(hitBg, 8)
 
                     local left = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(1, -130, 0, 0),
+                        Size = UDim2.new(1, -138, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
                         Parent = row,
                     })
@@ -908,11 +959,11 @@ function VoidUI:CreateWindow(cfg)
                     mk("TextLabel", {
                         BackgroundTransparency = 1,
                         Font = Fonts.Title,
-                        TextSize = 13,
+                        TextSize = 14,
                         TextColor3 = T.Text,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Text = titleText or "",
-                        Size = UDim2.new(1, 0, 0, 16),
+                        Size = UDim2.new(1, 0, 0, 17),
                         Parent = left,
                     })
 
@@ -1003,39 +1054,44 @@ function VoidUI:CreateWindow(cfg)
                     local suffix = o.Suffix or ""
                     local decimals = o.Decimals or 0
 
+                    addDivider()
+                    rowOrder = rowOrder + 1
                     local row = mk("Frame", {
                         BackgroundTransparency = 1,
                         Size = UDim2.new(1, 0, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
+                        LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    pad(row, 10, 4, 10, 4)
+                    pad(row, 12, 12, 12, 14)
+                    list(row, Enum.FillDirection.Vertical, 8)
 
                     local top = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 0, 18),
+                        Size = UDim2.new(1, 0, 0, 17),
+                        LayoutOrder = 1,
                         Parent = row,
                     })
                     mk("TextLabel", {
                         BackgroundTransparency = 1,
                         Font = Fonts.Title,
-                        TextSize = 13,
+                        TextSize = 14,
                         TextColor3 = T.Text,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Text = o.Title or "Slider",
-                        Size = UDim2.new(1, -50, 1, 0),
+                        Size = UDim2.new(1, -60, 1, 0),
                         Parent = top,
                     })
                     local valLbl = mk("TextLabel", {
                         BackgroundTransparency = 1,
-                        Font = Fonts.Body,
-                        TextSize = 12,
+                        Font = Fonts.Title,
+                        TextSize = 13,
                         TextColor3 = accent,
                         TextXAlignment = Enum.TextXAlignment.Right,
                         Text = (decimals > 0 and string.format("%." .. decimals .. "f", value) or tostring(math.floor(value + 0.5))) .. suffix,
-                        AnchorPoint = Vector2.new(1, 0),
-                        Position = UDim2.fromScale(1, 0),
-                        Size = UDim2.fromOffset(48, 18),
+                        AnchorPoint = Vector2.new(1, 0.5),
+                        Position = UDim2.new(1, 0, 0.5, 0),
+                        Size = UDim2.fromOffset(56, 17),
                         Parent = top,
                     })
 
@@ -1046,18 +1102,28 @@ function VoidUI:CreateWindow(cfg)
                             TextSize = 11,
                             TextColor3 = T.TextDim,
                             TextXAlignment = Enum.TextXAlignment.Left,
+                            TextYAlignment = Enum.TextYAlignment.Top,
                             TextWrapped = true,
                             Text = o.Desc,
                             Size = UDim2.new(1, 0, 0, 0),
                             AutomaticSize = Enum.AutomaticSize.Y,
+                            LayoutOrder = 2,
                             Parent = row,
                         })
                     end
 
+                    local trackWrap = mk("Frame", {
+                        BackgroundTransparency = 1,
+                        Size = UDim2.new(1, 0, 0, 14),
+                        LayoutOrder = 3,
+                        Parent = row,
+                    })
                     local track = mk("Frame", {
                         BackgroundColor3 = T.BgInput,
+                        AnchorPoint = Vector2.new(0, 0.5),
+                        Position = UDim2.new(0, 0, 0.5, 0),
                         Size = UDim2.new(1, 0, 0, 6),
-                        Parent = row,
+                        Parent = trackWrap,
                     })
                     corner(track, 3)
                     local fill = mk("Frame", {
@@ -1070,11 +1136,12 @@ function VoidUI:CreateWindow(cfg)
                         BackgroundColor3 = accent,
                         AnchorPoint = Vector2.new(0.5, 0.5),
                         Position = UDim2.new((value - min) / math.max(max - min, 1e-6), 0, 0.5, 0),
-                        Size = UDim2.fromOffset(14, 14),
+                        Size = UDim2.fromOffset(16, 16),
+                        ZIndex = 3,
                         Parent = track,
                     })
-                    corner(knob, 7)
-                    stroke(knob, Color3.new(1, 1, 1), 1, 0.7)
+                    corner(knob, 8)
+                    stroke(knob, Color3.fromRGB(20, 22, 18), 3, 0)
 
                     local sliding = false
                     local api = { Value = value }
@@ -1345,23 +1412,26 @@ function VoidUI:CreateWindow(cfg)
                 -----------------------------------------------------------------
                 function Section:Button(o)
                     o = o or {}
+                    addDivider()
+                    rowOrder = rowOrder + 1
                     local row = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 0, 44),
+                        Size = UDim2.new(1, 0, 0, 50),
+                        LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    pad(row, 6, 4, 6, 4)
+                    pad(row, 8, 8, 8, 8)
                     local b = mk("TextButton", {
                         BackgroundColor3 = accent,
                         AutoButtonColor = false,
                         Font = Fonts.Title,
                         TextSize = 13,
-                        TextColor3 = Color3.fromRGB(20, 20, 20),
+                        TextColor3 = Color3.fromRGB(18, 20, 14),
                         Text = o.Title or "Button",
                         Size = UDim2.fromScale(1, 1),
                         Parent = row,
                     })
-                    corner(b, 9)
+                    corner(b, 10)
                     hover(b, function()
                         tween(b, TI(0.12), { BackgroundColor3 = T.AccentDim })
                     end, function()
@@ -1471,22 +1541,27 @@ function VoidUI:CreateWindow(cfg)
                 -----------------------------------------------------------------
                 function Section:Paragraph(o)
                     o = o or {}
+                    addDivider()
+                    rowOrder = rowOrder + 1
                     local row = mk("Frame", {
                         BackgroundTransparency = 1,
                         Size = UDim2.new(1, 0, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
+                        LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    pad(row, 10, 4, 10, 4)
+                    pad(row, 12, 12, 12, 14)
+                    list(row, Enum.FillDirection.Vertical, 4)
                     if o.Title then
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
-                            TextSize = 13,
+                            TextSize = 14,
                             TextColor3 = T.Text,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             Text = o.Title,
-                            Size = UDim2.new(1, 0, 0, 16),
+                            Size = UDim2.new(1, 0, 0, 17),
+                            LayoutOrder = 1,
                             Parent = row,
                         })
                     end
@@ -1501,6 +1576,7 @@ function VoidUI:CreateWindow(cfg)
                         Text = o.Content or o.Desc or "",
                         Size = UDim2.new(1, 0, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
+                        LayoutOrder = 2,
                         Parent = row,
                     })
                     return {
@@ -1511,17 +1587,18 @@ function VoidUI:CreateWindow(cfg)
                 end
 
                 function Section:Divider()
+                    rowOrder = rowOrder + 1
                     local row = mk("Frame", {
                         BackgroundTransparency = 1,
                         Size = UDim2.new(1, 0, 0, 12),
+                        LayoutOrder = rowOrder,
                         Parent = card,
                     })
                     mk("Frame", {
-                        BackgroundColor3 = T.Stroke,
-                        BackgroundTransparency = 0.4,
+                        BackgroundColor3 = T.Divider,
                         AnchorPoint = Vector2.new(0.5, 0.5),
                         Position = UDim2.fromScale(0.5, 0.5),
-                        Size = UDim2.new(1, -8, 0, 1),
+                        Size = UDim2.new(1, -12, 0, 1),
                         BorderSizePixel = 0,
                         Parent = row,
                     })
