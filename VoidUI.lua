@@ -16,7 +16,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.3.2",
+    Version = "1.3.3",
     _windows = {},
 }
 
@@ -900,20 +900,24 @@ function VoidUI:CreateWindow(cfg)
                 ScrollBarImageColor3 = T.TextMute,
                 ScrollBarImageTransparency = 0.35,
                 CanvasSize = UDim2.new(0, 0, 0, 0),
-                AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                AutomaticCanvasSize = Enum.AutomaticSize.None,
                 Visible = false,
                 Parent = pageHost,
             })
-            pad(frame, 12, 20, 40, 20)
-
             -- two-column optional layout container
             local body = mk("Frame", {
                 Name = "Body",
                 BackgroundTransparency = 1,
-                Size = UDim2.new(1, 0, 0, 0),
+                Position = UDim2.fromOffset(20, 12),
+                Size = UDim2.new(1, -40, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
                 Parent = frame,
             })
+            local function updateCanvas()
+                frame.CanvasSize = UDim2.fromOffset(0, 12 + body.AbsoluteSize.Y + 32)
+            end
+            body:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateCanvas)
+            task.defer(updateCanvas)
 
             local columns = popts.Columns or 1
             local colFrames = {}
@@ -1341,7 +1345,7 @@ function VoidUI:CreateWindow(cfg)
 
                     local open = false
                     local menu
-                    local openToken = 0
+                    local dismiss
 
                     local api = {
                         Value = current,
@@ -1351,6 +1355,7 @@ function VoidUI:CreateWindow(cfg)
                     local function closeMenu()
                         open = false
                         if menu then menu:Destroy() menu = nil end
+                        if dismiss then dismiss:Destroy() dismiss = nil end
                     end
 
                     local function isSelected(v)
@@ -1367,22 +1372,9 @@ function VoidUI:CreateWindow(cfg)
                         if o.Callback then task.spawn(o.Callback, current) end
                     end
 
-                    -- IgnoreGuiInset ScreenGui AbsolutePosition is inset-free;
-                    -- GetMouseLocation includes topbar — must subtract or bottom row fails hit-tests.
-                    local function mouseGuiPos()
-                        return UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
-                    end
-
-                    local function pointIn(gui, p)
-                        local a = gui.AbsolutePosition
-                        local s = gui.AbsoluteSize
-                        return p.X >= a.X and p.X <= a.X + s.X and p.Y >= a.Y and p.Y <= a.Y + s.Y
-                    end
-
                     local function openMenu()
                         if open then closeMenu() return end
                         open = true
-                        openToken += 1
 
                         local abs = box.AbsolutePosition
                         local boxSz = box.AbsoluteSize
@@ -1398,6 +1390,19 @@ function VoidUI:CreateWindow(cfg)
                         local posX = math.max(8, abs.X + boxSz.X - menuW)
                         local posY = openUp and (abs.Y - menuH - 6) or (abs.Y + boxSz.Y + 6)
                         posY = math.max(8, posY)
+
+                        -- Dedicated click-catcher avoids coordinate/inset races.
+                        -- Menu has higher ZIndex, so every option remains clickable.
+                        dismiss = mk("TextButton", {
+                            BackgroundTransparency = 1,
+                            Text = "",
+                            AutoButtonColor = false,
+                            Active = true,
+                            Size = UDim2.fromScale(1, 1),
+                            ZIndex = 499,
+                            Parent = screen,
+                        })
+                        dismiss.MouseButton1Click:Connect(closeMenu)
 
                         menu = mk("Frame", {
                             BackgroundColor3 = T.BgSection,
@@ -1489,18 +1494,6 @@ function VoidUI:CreateWindow(cfg)
                         values = newValues or values
                         self.Values = values
                     end
-
-                    UserInputService.InputBegan:Connect(function(input)
-                        if not open or not menu then return end
-                        if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-                        local tokenAtClick = openToken
-                        task.delay(0.05, function()
-                            if tokenAtClick ~= openToken or not open or not menu then return end
-                            local p = mouseGuiPos()
-                            if pointIn(menu, p) or pointIn(box, p) then return end
-                            closeMenu()
-                        end)
-                    end)
 
                     if o.Flag then Window._flags[o.Flag] = api end
                     return api
