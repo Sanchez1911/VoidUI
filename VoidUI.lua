@@ -1,22 +1,22 @@
 --[[
-    VoidUI — WindUI / Cascade style library
-    Dark + lime · sidebar · tabs · toggle/slider/dropdown/input/keybind/button
+    VoidUI — voidw0rld style (purple glass + bloom)
     Usage:
       local VoidUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua"))()
 
     API sketch:
-      local W = VoidUI:CreateWindow({ Title=..., Icon=..., Accent=..., ToggleKey=Enum.KeyCode.RightShift })
-      local T = W:Tab({ Title="Farm", Icon="sword" })
+      local W = VoidUI:CreateWindow({
+        Title=..., Icon=..., Accent=...,
+        Transparency=0.16, Bloom=true, OpenButton=true, CornerRadius=26,
+        ToggleKey=Enum.KeyCode.G,
+      })
+      local T = W:Tab({ Title="Farm", Icon="lucide:swords" })
       local S = T:Section({ Title="AUTOMATION" })
-      S:Toggle({ Title=..., Desc=..., Value=false, Callback=fn })
-      S:Slider({ Title=..., Min=0, Max=10, Value=5, Suffix="s", Callback=fn })
-      S:Dropdown({ Title=..., Values={...}, Value=..., Multi=false, Callback=fn })
-      S:Button / Input / Keybind / Paragraph / Divider
-      VoidUI:Notify({ Title=..., Content=..., Duration=3 })
+      S:Toggle / Slider / Dropdown / Button / Input / Keybind / Paragraph
+      W:SetTransparency(0.2) / W:Toggle() / VoidUI:Notify({...})
 ]]
 
 local VoidUI = {
-    Version = "1.5.0",
+    Version = "1.5.1",
     _windows = {},
 }
 
@@ -462,21 +462,38 @@ function VoidUI:CreateWindow(cfg)
     screen.IgnoreGuiInset = true
     protect(screen)
 
-    -- Drop shadow (soft)
+    -- Drop shadow + soft bloom glow
     local shadow = mk("ImageLabel", {
         Name = "Shadow",
         BackgroundTransparency = 1,
         Image = "rbxassetid://6014261993",
         ImageColor3 = bloomOn and accent or Color3.new(0, 0, 0),
-        ImageTransparency = bloomOn and 0.72 or 0.4,
+        ImageTransparency = bloomOn and 0.68 or 0.4,
         ScaleType = Enum.ScaleType.Slice,
         SliceCenter = Rect.new(49, 49, 450, 450),
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.new(size.X.Scale, size.X.Offset + 64, size.Y.Scale, size.Y.Offset + 64),
+        Size = UDim2.new(size.X.Scale, size.X.Offset + (bloomOn and 78 or 64), size.Y.Scale, size.Y.Offset + (bloomOn and 78 or 64)),
         ZIndex = 0,
         Parent = screen,
     })
+    local bloomHalo = nil
+    if bloomOn then
+        bloomHalo = mk("ImageLabel", {
+            Name = "BloomHalo",
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://6014261993",
+            ImageColor3 = accent,
+            ImageTransparency = 0.82,
+            ScaleType = Enum.ScaleType.Slice,
+            SliceCenter = Rect.new(49, 49, 450, 450),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.new(size.X.Scale, size.X.Offset + 110, size.Y.Scale, size.Y.Offset + 110),
+            ZIndex = 0,
+            Parent = screen,
+        })
+    end
 
     -- CanvasGroup clips children to rounded corners (fixes sharp left sidebar)
     local main = Instance.new("CanvasGroup")
@@ -680,6 +697,7 @@ function VoidUI:CreateWindow(cfg)
             local np = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
             main.Position = np
             shadow.Position = np
+            if bloomHalo then bloomHalo.Position = np end
         end
     end)
 
@@ -714,6 +732,7 @@ function VoidUI:CreateWindow(cfg)
         self.Visible = v and true or false
         main.Visible = self.Visible
         shadow.Visible = self.Visible
+        if bloomHalo then bloomHalo.Visible = self.Visible end
         if self._openBtn then
             -- floating icon stays for mobile reopen when hidden
             self._openBtn.Visible = true
@@ -796,7 +815,7 @@ function VoidUI:CreateWindow(cfg)
 
     winBtn("lucide:minus", function()
         Window:SetVisible(false)
-        VoidUI:Notify({ Title = title, Content = "Hidden — press toggle key to show", Duration = 2 })
+        VoidUI:Notify({ Title = title, Content = "Hidden — tap the float icon or toggle key", Duration = 2 })
     end)
     winBtn("lucide:x", function()
         Window:Destroy()
@@ -1089,7 +1108,7 @@ function VoidUI:CreateWindow(cfg)
                     math.floor(accent.G * 255 * 0.55 + T.Stroke.G * 255 * 0.45),
                     math.floor(accent.B * 255 * 0.55 + T.Stroke.B * 255 * 0.45)
                 ) or T.Stroke, 1, bloomOn and 0.55 or 0.4)
-                pad(card, 2, 4, 2, 4)
+                pad(card, 1, 2, 1, 2)
                 list(card, Enum.FillDirection.Vertical, 0)
 
                 local Section = { Frame = card, Title = secTitle }
@@ -1129,7 +1148,7 @@ function VoidUI:CreateWindow(cfg)
                         Parent = card,
                     })
                     row:SetAttribute("_bt", 1)
-                    pad(row, 8, 8, 8, 10)
+                    pad(row, 6, 6, 6, 8)
 
                     -- subtle hover highlight over the whole row
                     local hitBg = mk("Frame", {
@@ -1149,11 +1168,11 @@ function VoidUI:CreateWindow(cfg)
 
                     local left = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(1, -124, 0, 0),
+                        Size = UDim2.new(1, -112, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
                         Parent = row,
                     })
-                    list(left, Enum.FillDirection.Vertical, 2)
+                    list(left, Enum.FillDirection.Vertical, 1)
 
                     mk("TextLabel", {
                         BackgroundTransparency = 1,
@@ -1262,8 +1281,8 @@ function VoidUI:CreateWindow(cfg)
                         LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    pad(row, 8, 8, 8, 10)
-                    list(row, Enum.FillDirection.Vertical, 6)
+                    pad(row, 6, 6, 6, 8)
+                    list(row, Enum.FillDirection.Vertical, 5)
 
                     local top = mk("Frame", {
                         BackgroundTransparency = 1,
@@ -1617,7 +1636,7 @@ function VoidUI:CreateWindow(cfg)
                         LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    pad(row, 8, 8, 8, 8)
+                    pad(row, 6, 6, 6, 6)
                     local b = mk("TextButton", {
                         BackgroundColor3 = accent,
                         AutoButtonColor = false,
@@ -1759,8 +1778,8 @@ function VoidUI:CreateWindow(cfg)
                         LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    pad(row, 12, 12, 12, 14)
-                    list(row, Enum.FillDirection.Vertical, 4)
+                    pad(row, 8, 8, 8, 10)
+                    list(row, Enum.FillDirection.Vertical, 3)
                     if o.Title then
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
