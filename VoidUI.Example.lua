@@ -5,7 +5,8 @@
 ]]
 
 -- HttpGet (แนะนำ) — ไม่พึ่ง readfile
-local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua"
+-- cache-bust เมื่ออัป version (executor มัก cache raw เก่า)
+local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua?v=1.3.0"
 
 local function loadLib()
     local ok, body = pcall(function()
