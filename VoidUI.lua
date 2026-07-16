@@ -14,7 +14,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.6.2",
+    Version = "1.6.3",
     _windows = {},
 }
 
@@ -614,6 +614,7 @@ function VoidUI:CreateWindow(cfg)
         Name = "TopBar",
         BackgroundTransparency = 1,
         Size = UDim2.new(1, 0, 0, 56),
+        ZIndex = 20,
         Parent = content,
     })
     pad(topBar, 0, 16, 0, 20)
@@ -964,8 +965,6 @@ function VoidUI:CreateWindow(cfg)
         end
 
         if not searchHost then return end
-        local abs = searchHost.AbsolutePosition
-        local hostSz = searchHost.AbsoluteSize
 
         local itemH = 44
         local gap = 2
@@ -975,18 +974,37 @@ function VoidUI:CreateWindow(cfg)
         local panelW = 280
         local panelH = listH + padV * 2
 
+        -- Parent under content + delta AbsolutePosition — avoids GuiInset mismatch
+        -- that was shoving the panel up over the search input.
         searchPanel = mk("Frame", {
             Name = "SearchResults",
             BackgroundColor3 = Color3.fromRGB(16, 14, 22),
             BorderSizePixel = 0,
-            Position = UDim2.fromOffset(abs.X + hostSz.X - panelW, abs.Y + hostSz.Y + 8),
             Size = UDim2.fromOffset(panelW, panelH),
-            ZIndex = 600,
-            Parent = screen,
+            ZIndex = 5,
+            Parent = content,
         })
         corner(searchPanel, 14)
         stroke(searchPanel, Color3.fromRGB(52, 48, 64), 1, 0.5)
         pad(searchPanel, padV, 6, padV, 6)
+
+        local function placePanel()
+            if not (searchPanel and searchPanel.Parent and searchHost.Parent) then return end
+            local hp = searchHost.AbsolutePosition
+            local hs = searchHost.AbsoluteSize
+            local cp = content.AbsolutePosition
+            local cs = content.AbsoluteSize
+            local x = hp.X - cp.X + hs.X - panelW
+            local y = hp.Y - cp.Y + hs.Y + 8
+            -- keep inside content bounds
+            x = math.clamp(x, 8, math.max(8, cs.X - panelW - 8))
+            -- never cover the search input / top bar
+            y = math.max(y, 60)
+            y = math.clamp(y, 60, math.max(60, cs.Y - panelH - 8))
+            searchPanel.Position = UDim2.fromOffset(x, y)
+        end
+        placePanel()
+        task.defer(placePanel)
 
         if #matches == 0 then
             mk("TextLabel", {
@@ -996,7 +1014,7 @@ function VoidUI:CreateWindow(cfg)
                 TextColor3 = T.TextMute,
                 Text = "No results",
                 Size = UDim2.fromScale(1, 1),
-                ZIndex = 601,
+                ZIndex = 81,
                 Parent = searchPanel,
             })
             return
@@ -1011,7 +1029,7 @@ function VoidUI:CreateWindow(cfg)
             ScrollBarImageTransparency = 0.4,
             CanvasSize = UDim2.fromOffset(0, #matches * itemH + math.max(0, #matches - 1) * gap),
             ScrollingEnabled = #matches > shown,
-            ZIndex = 601,
+            ZIndex = 81,
             Parent = searchPanel,
         })
         list(host, Enum.FillDirection.Vertical, gap)
@@ -1023,12 +1041,12 @@ function VoidUI:CreateWindow(cfg)
                 AutoButtonColor = false,
                 Text = "",
                 Size = UDim2.new(1, 0, 0, itemH),
-                ZIndex = 602,
+                ZIndex = 82,
                 Parent = host,
             })
             corner(item, 10)
 
-            local ic = makeIcon(item, "lucide:corner-down-right", 13, T.TextMute, 603)
+            local ic = makeIcon(item, "lucide:corner-down-right", 13, T.TextMute, 83)
             ic.AnchorPoint = Vector2.new(0, 0.5)
             ic.Position = UDim2.new(0, 10, 0.5, 0)
 
@@ -1042,7 +1060,7 @@ function VoidUI:CreateWindow(cfg)
                 Text = e.Title,
                 Position = UDim2.fromOffset(32, 6),
                 Size = UDim2.new(1, -40, 0, 16),
-                ZIndex = 603,
+                ZIndex = 83,
                 Parent = item,
             })
             mk("TextLabel", {
@@ -1055,7 +1073,7 @@ function VoidUI:CreateWindow(cfg)
                 Text = e.TabTitle .. "  ·  " .. e.Section,
                 Position = UDim2.fromOffset(32, 23),
                 Size = UDim2.new(1, -40, 0, 14),
-                ZIndex = 603,
+                ZIndex = 83,
                 Parent = item,
             })
 
