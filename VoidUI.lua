@@ -16,7 +16,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.4.1",
+    Version = "1.4.2",
     _windows = {},
 }
 
@@ -262,7 +262,7 @@ end
 
 local function corner(parent, r)
     local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, r or 10)
+    c.CornerRadius = UDim.new(0, r or 12)
     c.Parent = parent
     return c
 end
@@ -368,7 +368,7 @@ function VoidUI:Notify(opts)
         AutomaticSize = Enum.AutomaticSize.Y,
         Parent = host,
     })
-    corner(card, 12)
+    corner(card, 16)
     stroke(card, Theme.Stroke, 1, 0.3)
     pad(card, 14, 14, 14, 14)
 
@@ -480,7 +480,7 @@ function VoidUI:CreateWindow(cfg)
         ClipsDescendants = true,
         Parent = screen,
     })
-    corner(main, 18)
+    corner(main, 24)
     stroke(main, Color3.fromRGB(96, 64, 150), 1, 0.62)
 
     -- Sidebar
@@ -605,7 +605,7 @@ function VoidUI:CreateWindow(cfg)
             AutoButtonColor = false,
             Parent = winBtns,
         })
-        corner(b, 9)
+        corner(b, 12)
         local h, img = makeIcon(b, iconName, 14, T.TextDim, 2)
         h.AnchorPoint = Vector2.new(0.5, 0.5)
         h.Position = UDim2.fromScale(0.5, 0.5)
@@ -828,7 +828,7 @@ function VoidUI:CreateWindow(cfg)
             Size = UDim2.fromOffset(40, 40),
             Parent = btn,
         })
-        corner(iconBg, 12)
+        corner(iconBg, 14)
 
         local iconHolder, iconLbl = makeIcon(iconBg, tabIcon, 20, T.TextDim, 2)
         iconHolder.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -985,8 +985,8 @@ function VoidUI:CreateWindow(cfg)
                 mk("TextLabel", {
                     BackgroundTransparency = 1,
                     Font = Fonts.Title,
-                    TextSize = 12,
-                    TextColor3 = Color3.fromRGB(200, 188, 230),
+                    TextSize = 13,
+                    TextColor3 = Color3.fromRGB(210, 198, 235),
                     TextXAlignment = Enum.TextXAlignment.Left,
                     Text = string.upper(secTitle),
                     Size = UDim2.new(1, 0, 0, 16),
@@ -1000,9 +1000,9 @@ function VoidUI:CreateWindow(cfg)
                     AutomaticSize = Enum.AutomaticSize.Y,
                     Parent = wrap,
                 })
-                corner(card, 16)
+                corner(card, 20)
                 stroke(card, T.Stroke, 1, 0.4)
-                pad(card, 6, 8, 6, 8)
+                pad(card, 8, 10, 8, 10)
                 list(card, Enum.FillDirection.Vertical, 0)
 
                 local Section = { Frame = card, Title = secTitle }
@@ -1052,7 +1052,7 @@ function VoidUI:CreateWindow(cfg)
                         ZIndex = 0,
                         Parent = row,
                     })
-                    corner(hitBg, 10)
+                    corner(hitBg, 12)
                     row.MouseEnter:Connect(function()
                         tween(hitBg, TI(0.12), { BackgroundTransparency = 0.72 })
                     end)
@@ -1083,8 +1083,8 @@ function VoidUI:CreateWindow(cfg)
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
-                            TextSize = 12,
-                            TextColor3 = Color3.fromRGB(186, 176, 208),
+                            TextSize = 13,
+                            TextColor3 = Color3.fromRGB(198, 188, 220),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextWrapped = true,
                             Text = descText,
@@ -1211,8 +1211,8 @@ function VoidUI:CreateWindow(cfg)
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
-                            TextSize = 12,
-                            TextColor3 = Color3.fromRGB(186, 176, 208),
+                            TextSize = 13,
+                            TextColor3 = Color3.fromRGB(198, 188, 220),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextYAlignment = Enum.TextYAlignment.Top,
                             TextWrapped = true,
@@ -1332,7 +1332,7 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.fromScale(1, 1),
                         Parent = right,
                     })
-                    corner(box, 8)
+                    corner(box, 12)
                     stroke(box, T.Stroke, 1, 0.4)
 
                     local function labelText()
@@ -1430,7 +1430,7 @@ function VoidUI:CreateWindow(cfg)
                             ZIndex = 500,
                             Parent = screen,
                         })
-                        corner(menu, 10)
+                        corner(menu, 14)
                         stroke(menu, accent, 1, 0.55)
                         pad(menu, padTop, 8, padBot, 8)
 
@@ -1454,7 +1454,7 @@ function VoidUI:CreateWindow(cfg)
                                 ZIndex = 502,
                                 Parent = listHost,
                             })
-                            corner(item, 8)
+                            corner(item, 10)
                             mk("TextLabel", {
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Body,
@@ -1541,7 +1541,7 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.fromScale(1, 1),
                         Parent = row,
                     })
-                    corner(b, 10)
+                    corner(b, 12)
                     hover(b, function()
                         tween(b, TI(0.12), { BackgroundColor3 = T.AccentDim })
                     end, function()
@@ -1572,7 +1572,7 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.fromScale(1, 1),
                         Parent = right,
                     })
-                    corner(box, 8)
+                    corner(box, 12)
                     stroke(box, T.Stroke, 1, 0.4)
                     pad(box, 0, 8, 0, 8)
 
@@ -1608,7 +1608,7 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.fromScale(1, 1),
                         Parent = right,
                     })
-                    corner(box, 8)
+                    corner(box, 12)
                     stroke(box, T.Stroke, 1, 0.4)
 
                     local listening = false
@@ -1691,7 +1691,7 @@ function VoidUI:CreateWindow(cfg)
                         BackgroundTransparency = 1,
                         Font = Fonts.Desc,
                         TextSize = 13,
-                        TextColor3 = Color3.fromRGB(186, 176, 208),
+                        TextColor3 = Color3.fromRGB(198, 188, 220),
                         TextXAlignment = Enum.TextXAlignment.Left,
                         TextYAlignment = Enum.TextYAlignment.Top,
                         TextWrapped = true,
