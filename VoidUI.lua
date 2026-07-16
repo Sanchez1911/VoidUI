@@ -1,23 +1,20 @@
 --[[
-    VoidUI — voidw0rld style (glass + header bloom)
+    VoidUI — voidw0rld style (glass + header bloom + search)
     Usage:
-      local VoidUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua"))()
+      local VoidUI = loadstring(game:HttpGet(".../VoidUI.lua"))()
 
     API sketch:
       local W = VoidUI:CreateWindow({
         Title=..., Icon=..., Accent=...,
-        Transparency=0.16, Bloom=true, OpenButton=true, CornerRadius=26,
+        Transparency=0.16, Bloom=true, Search=true, OpenButton=true,
         ToggleKey=Enum.KeyCode.G,
       })
-      -- Bloom = accent glow on titles/headers (not outer window glow)
-      local T = W:Tab({ Title="Farm", Icon="lucide:swords" })
-      local S = T:Section({ Title="AUTOMATION" })
-      S:Toggle / Slider / Dropdown / Button / Input / Keybind / Paragraph
-      W:SetTransparency(0.2) / W:Toggle() / VoidUI:Notify({...})
+      S:Button({ Title=..., Icon="lucide:save", Style="Accent"|"Soft"|"Ghost", Desc=..., Callback=fn })
+      W:Search("train") / W:SetTransparency(0.2) / W:Toggle()
 ]]
 
 local VoidUI = {
-    Version = "1.5.5", -- bloomLabel-after-mk fix
+    Version = "1.6.0", -- search + button icons
     _windows = {},
 }
 
@@ -504,6 +501,7 @@ function VoidUI:CreateWindow(cfg)
     glass = math.clamp(tonumber(glass) or 0.14, 0, 0.6)
     local bloomOn = cfg.Bloom ~= false
     local wantOpenBtn = cfg.OpenButton ~= false
+    local wantSearch = cfg.Search ~= false
     local cornerR = cfg.CornerRadius or 26
 
     -- deep copy theme overrides
@@ -622,7 +620,7 @@ function VoidUI:CreateWindow(cfg)
 
     local titleHost = mk("Frame", {
         BackgroundTransparency = 1,
-        Size = UDim2.new(0.62, 0, 1, 0),
+        Size = UDim2.new(wantSearch and 0.38 or 0.62, 0, 1, 0),
         Parent = topBar,
     })
     local titleWrap = bloomLabel({
@@ -671,6 +669,37 @@ function VoidUI:CreateWindow(cfg)
         Parent = topBar,
     })
     list(winBtns, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Right, Enum.VerticalAlignment.Center)
+
+    -- Search field (filters options by title/desc; jumps tab if needed)
+    local searchBox
+    if wantSearch then
+        local searchHost = mk("Frame", {
+            Name = "SearchHost",
+            BackgroundColor3 = Color3.fromRGB(22, 18, 30),
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -88, 0.5, 0),
+            Size = UDim2.fromOffset(200, 32),
+            Parent = topBar,
+        })
+        corner(searchHost, 10)
+        stroke(searchHost, Color3.fromRGB(48, 46, 58), 1, 0.55)
+        local sIcon = makeIcon(searchHost, "lucide:search", 14, T.TextMute, 2)
+        sIcon.Position = UDim2.fromOffset(10, 9)
+        searchBox = mk("TextBox", {
+            BackgroundTransparency = 1,
+            Font = Fonts.Body,
+            TextSize = 12,
+            TextColor3 = T.Text,
+            PlaceholderText = "Search...",
+            PlaceholderColor3 = T.TextMute,
+            Text = "",
+            ClearTextOnFocus = false,
+            Position = UDim2.fromOffset(30, 0),
+            Size = UDim2.new(1, -38, 1, 0),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Parent = searchHost,
+        })
+    end
 
     local function winBtn(iconName, cb)
         local b = mk("TextButton", {
@@ -759,9 +788,66 @@ function VoidUI:CreateWindow(cfg)
         _tabs = {},
         _activeTab = nil,
         _flags = {},
+        _searchEntries = {},
+        _searchQuery = "",
         Visible = true,
         _openBtn = nil,
     }
+
+    local function applySearch(query)
+        query = string.lower(tostring(query or "")):gsub("^%s+", ""):gsub("%s+$", "")
+        Window._searchQuery = query
+        local searching = query ~= ""
+
+        local wrapVis = {}
+        local tabHits = {}
+        for _, e in ipairs(Window._searchEntries) do
+            local hit = (not searching) or (string.find(e.Text, query, 1, true) ~= nil)
+            if e.Row and e.Row.Parent then
+                e.Row.Visible = hit
+            end
+            if e.Divider and e.Divider.Parent then
+                e.Divider.Visible = not searching
+            end
+            if e.Wrap then
+                wrapVis[e.Wrap] = wrapVis[e.Wrap] or false
+                if hit then wrapVis[e.Wrap] = true end
+            end
+            if hit and e.Tab then
+                tabHits[e.Tab] = true
+            end
+        end
+        for wrap, vis in pairs(wrapVis) do
+            if wrap and wrap.Parent then
+                wrap.Visible = (not searching) or vis
+            end
+        end
+
+        if searching then
+            local active = Window._activeTab
+            if active and not tabHits[active] then
+                for _, t in ipairs(Window._tabs) do
+                    if tabHits[t] then
+                        Window:SelectTab(t)
+                        break
+                    end
+                end
+            end
+        end
+    end
+
+    function Window:Search(query)
+        if searchBox then
+            searchBox.Text = tostring(query or "")
+        end
+        applySearch(query)
+    end
+
+    if searchBox then
+        searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            applySearch(searchBox.Text)
+        end)
+    end
 
     local function setPagesOffset(hasSub)
         if hasSub then
@@ -1193,6 +1279,29 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.new(1, -6, 0, 1),
                         Parent = d,
                     })
+                    table.insert(Window._searchEntries, {
+                        Divider = d,
+                        Wrap = wrap,
+                        Tab = Tab,
+                        Text = "",
+                    })
+                end
+
+                local function registerSearch(row, titleText, descText)
+                    table.insert(Window._searchEntries, {
+                        Row = row,
+                        Wrap = wrap,
+                        Tab = Tab,
+                        Text = string.lower(table.concat({
+                            tostring(titleText or ""),
+                            " ",
+                            tostring(descText or ""),
+                            " ",
+                            tostring(secTitle or ""),
+                            " ",
+                            tostring(tabTitle or ""),
+                        })),
+                    })
                 end
 
                 -- base row container: fixed comfortable height, left text + right control slot
@@ -1268,6 +1377,7 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.fromOffset(120, 28),
                         Parent = row,
                     })
+                    registerSearch(row, titleText, descText)
                     return row, left, right
                 end
 
@@ -1344,6 +1454,7 @@ function VoidUI:CreateWindow(cfg)
                     })
                     pad(row, 6, 6, 6, 8)
                     list(row, Enum.FillDirection.Vertical, 5)
+                    registerSearch(row, o.Title or "Slider", o.Desc)
 
                     local top = mk("Frame", {
                         BackgroundTransparency = 1,
@@ -1763,26 +1874,98 @@ function VoidUI:CreateWindow(cfg)
                     rowOrder = rowOrder + 1
                     local row = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 0, 50),
+                        Size = UDim2.new(1, 0, 0, o.Desc and 58 or 46),
                         LayoutOrder = rowOrder,
                         Parent = card,
                     })
                     pad(row, 6, 6, 6, 6)
+                    registerSearch(row, o.Title or "Button", o.Desc)
+
+                    local style = string.lower(tostring(o.Style or "accent"))
+                    local bg, bgHover, textCol, strokeCol, strokeT
+                    if style == "ghost" then
+                        bg = Color3.fromRGB(26, 22, 34)
+                        bgHover = Color3.fromRGB(36, 30, 48)
+                        textCol = T.Text
+                        strokeCol = Color3.fromRGB(52, 48, 64)
+                        strokeT = 0.45
+                    elseif style == "soft" then
+                        bg = Color3.fromRGB(40, 28, 62)
+                        bgHover = Color3.fromRGB(52, 36, 82)
+                        textCol = Color3.fromRGB(236, 228, 255)
+                        strokeCol = Color3.fromRGB(72, 52, 110)
+                        strokeT = 0.55
+                    else
+                        bg = accent
+                        bgHover = T.AccentDim
+                        textCol = Color3.new(1, 1, 1)
+                        strokeCol = nil
+                    end
+
                     local b = mk("TextButton", {
-                        BackgroundColor3 = accent,
+                        BackgroundColor3 = bg,
                         AutoButtonColor = false,
-                        Font = Fonts.Title,
-                        TextSize = 13,
-                        TextColor3 = Color3.new(1, 1, 1),
-                        Text = o.Title or "Button",
+                        Text = "",
                         Size = UDim2.fromScale(1, 1),
                         Parent = row,
                     })
                     corner(b, 12)
+                    if strokeCol then
+                        stroke(b, strokeCol, 1, strokeT)
+                    end
+
+                    local inner = mk("Frame", {
+                        BackgroundTransparency = 1,
+                        AnchorPoint = Vector2.new(0.5, 0.5),
+                        Position = UDim2.fromScale(0.5, 0.5),
+                        Size = UDim2.new(1, -20, 1, -8),
+                        Parent = b,
+                    })
+                    list(inner, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
+
+                    if o.Icon then
+                        local ih = makeIcon(inner, o.Icon, 16, textCol, 2)
+                        ih.Size = UDim2.fromOffset(16, 16)
+                        ih.LayoutOrder = 1
+                    end
+
+                    local textColFrame = mk("Frame", {
+                        BackgroundTransparency = 1,
+                        Size = UDim2.fromOffset(0, 0),
+                        AutomaticSize = Enum.AutomaticSize.XY,
+                        LayoutOrder = 2,
+                        Parent = inner,
+                    })
+                    list(textColFrame, Enum.FillDirection.Vertical, 1, Enum.HorizontalAlignment.Center)
+
+                    mk("TextLabel", {
+                        BackgroundTransparency = 1,
+                        Font = Fonts.Title,
+                        TextSize = 13,
+                        TextColor3 = textCol,
+                        Text = o.Title or "Button",
+                        Size = UDim2.fromOffset(0, 16),
+                        AutomaticSize = Enum.AutomaticSize.X,
+                        Parent = textColFrame,
+                    })
+                    if o.Desc and o.Desc ~= "" then
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Desc,
+                            TextSize = 11,
+                            TextColor3 = style == "accent" and Color3.fromRGB(230, 220, 255) or T.TextMute,
+                            TextTransparency = style == "accent" and 0.25 or 0,
+                            Text = o.Desc,
+                            Size = UDim2.fromOffset(0, 14),
+                            AutomaticSize = Enum.AutomaticSize.X,
+                            Parent = textColFrame,
+                        })
+                    end
+
                     hover(b, function()
-                        tween(b, TI(0.12), { BackgroundColor3 = T.AccentDim })
+                        tween(b, TI(0.12), { BackgroundColor3 = bgHover })
                     end, function()
-                        tween(b, TI(0.12), { BackgroundColor3 = accent })
+                        tween(b, TI(0.12), { BackgroundColor3 = bg })
                     end)
                     b.MouseButton1Click:Connect(function()
                         if o.Callback then task.spawn(o.Callback) end
@@ -1911,6 +2094,7 @@ function VoidUI:CreateWindow(cfg)
                     })
                     pad(row, 8, 8, 8, 10)
                     list(row, Enum.FillDirection.Vertical, 3)
+                    registerSearch(row, o.Title, o.Content or o.Desc)
                     if o.Title then
                         mk("TextLabel", {
                             BackgroundTransparency = 1,

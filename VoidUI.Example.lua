@@ -48,6 +48,7 @@ local Window = VoidUI:CreateWindow({
     Size = UDim2.fromOffset(720, 560),
     Transparency = 0.16, -- glass
     Bloom = true, -- header/title accent bloom (not outer glow)
+    Search = true, -- top search bar
     OpenButton = true, -- floating icon for mobile toggle
     CornerRadius = 26,
     ToggleKey = Enum.KeyCode.G,
@@ -338,6 +339,9 @@ Window:Tab({ Title = "Inventory", Icon = "lucide:backpack" })
     :Section({ Title = "BAG" })
     :Button({
         Title = "Notify test",
+        Icon = "lucide:bell",
+        Style = "Soft",
+        Desc = "Fire a sample notification",
         Callback = function()
             VoidUI:Notify({ Title = "VoidUI", Content = "Library ready", Duration = 3 })
         end,
@@ -353,35 +357,79 @@ Window:Tab({ Title = "Travel", Icon = "lucide:compass" })
     })
 
 local Settings = Window:Tab({ Title = "Settings", Icon = "lucide:settings" })
-local setSec = Settings:Section({ Title = "CONFIG" })
-setSec:Button({
-    Title = "Save config",
-    Callback = function()
-        Window:SaveConfig("demo")
-        VoidUI:Notify({ Title = "Config", Content = "Saved demo.json", Duration = 2 })
-    end,
-})
-setSec:Button({
-    Title = "Load config",
-    Callback = function()
-        if Window:LoadConfig("demo") then
-            VoidUI:Notify({ Title = "Config", Content = "Loaded", Duration = 2 })
-        else
-            VoidUI:Notify({ Title = "Config", Content = "No file", Duration = 2 })
-        end
-    end,
-})
-setSec:Keybind({
-    Title = "UI Toggle",
-    Desc = "Press to show / hide the hub",
-    Value = Enum.KeyCode.G,
-    WindowToggle = true,
-    Flag = "uiToggle",
-})
+
+do
+    local look = Settings:Section({ Title = "APPEARANCE" })
+    look:Slider({
+        Title = "Transparency",
+        Desc = "Glass amount on the main panel",
+        Min = 0,
+        Max = 45,
+        Value = 16,
+        Suffix = "%",
+        Flag = "uiGlass",
+        Callback = function(v)
+            Window:SetTransparency(v / 100)
+        end,
+    })
+    look:Paragraph({
+        Title = "voidw0rld look",
+        Content = "Purple accent · clean borders · header bloom. Search up top finds any option across tabs.",
+    })
+end
+
+do
+    local cfg = Settings:Section({ Title = "CONFIG" })
+    cfg:Button({
+        Title = "Save config",
+        Icon = "lucide:save",
+        Style = "Accent",
+        Desc = "Write flags to demo.json",
+        Callback = function()
+            Window:SaveConfig("demo")
+            VoidUI:Notify({ Title = "Config", Content = "Saved demo.json", Duration = 2 })
+        end,
+    })
+    cfg:Button({
+        Title = "Load config",
+        Icon = "lucide:folder-open",
+        Style = "Soft",
+        Desc = "Restore the last saved flags",
+        Callback = function()
+            if Window:LoadConfig("demo") then
+                VoidUI:Notify({ Title = "Config", Content = "Loaded", Duration = 2 })
+            else
+                VoidUI:Notify({ Title = "Config", Content = "No file", Duration = 2 })
+            end
+        end,
+    })
+    cfg:Button({
+        Title = "Reset UI",
+        Icon = "lucide:rotate-ccw",
+        Style = "Ghost",
+        Desc = "Clear search & show hub",
+        Callback = function()
+            Window:Search("")
+            Window:SetVisible(true)
+            VoidUI:Notify({ Title = "UI", Content = "Reset", Duration = 1.5 })
+        end,
+    })
+end
+
+do
+    local kb = Settings:Section({ Title = "KEYBINDS" })
+    kb:Keybind({
+        Title = "UI Toggle",
+        Desc = "Show / hide the hub (or use the float icon)",
+        Value = Enum.KeyCode.G,
+        WindowToggle = true,
+        Flag = "uiToggle",
+    })
+end
 
 VoidUI:Notify({
     Title = "VoidUI " .. VoidUI.Version,
-    Content = "G = show/hide",
+    Content = "Search · G = toggle · float icon on mobile",
     Duration = 4,
 })
 
