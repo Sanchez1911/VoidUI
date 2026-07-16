@@ -16,7 +16,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.2.0",
+    Version = "1.3.0",
     _windows = {},
 }
 
@@ -35,23 +35,23 @@ local Mouse = LP:GetMouse()
 -- Theme
 ---------------------------------------------------------------------------
 local Theme = {
-    Accent = Color3.fromRGB(198, 255, 71),
-    AccentDim = Color3.fromRGB(150, 200, 48),
-    Bg = Color3.fromRGB(16, 17, 16),
-    BgPanel = Color3.fromRGB(24, 25, 23),
-    BgSidebar = Color3.fromRGB(12, 13, 12),
-    BgSection = Color3.fromRGB(27, 28, 26),
-    BgHover = Color3.fromRGB(40, 42, 38),
-    BgInput = Color3.fromRGB(38, 40, 36),
-    BgToggleOff = Color3.fromRGB(52, 54, 50),
-    Stroke = Color3.fromRGB(48, 50, 46),
-    Divider = Color3.fromRGB(38, 40, 37),
-    Text = Color3.fromRGB(244, 246, 240),
-    TextDim = Color3.fromRGB(138, 142, 132),
-    TextMute = Color3.fromRGB(96, 100, 92),
+    Accent = Color3.fromRGB(168, 85, 247),       -- purple
+    AccentDim = Color3.fromRGB(126, 58, 210),
+    Bg = Color3.fromRGB(11, 9, 15),
+    BgPanel = Color3.fromRGB(17, 14, 24),
+    BgSidebar = Color3.fromRGB(9, 7, 12),
+    BgSection = Color3.fromRGB(22, 18, 30),
+    BgHover = Color3.fromRGB(42, 32, 60),
+    BgInput = Color3.fromRGB(34, 28, 46),
+    BgToggleOff = Color3.fromRGB(52, 44, 66),
+    Stroke = Color3.fromRGB(58, 46, 78),
+    Divider = Color3.fromRGB(40, 34, 54),
+    Text = Color3.fromRGB(255, 255, 255),
+    TextDim = Color3.fromRGB(168, 158, 186),
+    TextMute = Color3.fromRGB(112, 102, 130),
     Shadow = Color3.fromRGB(0, 0, 0),
-    Danger = Color3.fromRGB(255, 92, 88),
-    Success = Color3.fromRGB(198, 255, 71),
+    Danger = Color3.fromRGB(255, 92, 110),
+    Success = Color3.fromRGB(168, 85, 247),
 }
 
 local Fonts = {
@@ -432,8 +432,8 @@ function VoidUI:CreateWindow(cfg)
     local accent = cfg.Accent or Theme.Accent
     local title = cfg.Title or "VoidUI"
     local author = cfg.Author or cfg.Subtitle or ""
-    local logoIcon = cfg.Icon or "lucide:origami"
-    local size = cfg.Size or UDim2.fromOffset(660, 520)
+    local logoIcon = cfg.Icon or "rbxassetid://111627748770819"
+    local size = cfg.Size or UDim2.fromOffset(680, 540)
     local toggleKey = cfg.ToggleKey or Enum.KeyCode.RightShift
     local folder = cfg.Folder -- optional config folder name
 
@@ -479,8 +479,8 @@ function VoidUI:CreateWindow(cfg)
         ClipsDescendants = true,
         Parent = screen,
     })
-    corner(main, 18)
-    stroke(main, T.Stroke, 1, 0.2)
+    corner(main, 20)
+    stroke(main, Color3.fromRGB(88, 60, 130), 1, 0.55)
 
     -- Sidebar
     local sidebarW = 64
@@ -510,14 +510,18 @@ function VoidUI:CreateWindow(cfg)
     })
     local logoBg = mk("Frame", {
         BackgroundColor3 = accent,
-        BackgroundTransparency = 0.88,
+        BackgroundTransparency = 0.72,
         AnchorPoint = Vector2.new(0.5, 0.5),
         Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.fromOffset(40, 40),
+        Size = UDim2.fromOffset(42, 42),
         Parent = logo,
     })
-    corner(logoBg, 12)
-    local logoHolder, logoImg = makeIcon(logoBg, logoIcon, 22, accent, 2)
+    corner(logoBg, 13)
+    stroke(logoBg, accent, 1, 0.55)
+    -- custom rbxasset logos keep natural colors (ImageColor white); lucide gets accent tint
+    local logoIsAsset = typeof(logoIcon) == "string" and (logoIcon:find("rbxasset", 1, true) or logoIcon:find("http", 1, true))
+    local logoTint = logoIsAsset and Color3.new(1, 1, 1) or accent
+    local logoHolder = makeIcon(logoBg, logoIcon, logoIsAsset and 28 or 22, logoTint, 2)
     logoHolder.AnchorPoint = Vector2.new(0.5, 0.5)
     logoHolder.Position = UDim2.fromScale(0.5, 0.5)
 
@@ -835,13 +839,12 @@ function VoidUI:CreateWindow(cfg)
             _window = Window,
         }
 
-        local darkIcon = Color3.fromRGB(18, 20, 14)
+        local darkIcon = Color3.new(1, 1, 1) -- white icon on purple active chip
         function Tab:_setActive(on)
             pageHost.Visible = on
             if on then
                 tween(indicator, TI(0.18, Enum.EasingStyle.Quart), { Size = UDim2.fromOffset(3, 22) })
                 tween(iconBg, TI(0.18), { BackgroundTransparency = 0 })
-                setIconColor(iconLbl, darkIcon)
                 if iconLbl then
                     tween(iconLbl, TI(0.18), { ImageColor3 = darkIcon })
                 end
@@ -1226,7 +1229,7 @@ function VoidUI:CreateWindow(cfg)
                         Parent = track,
                     })
                     corner(knob, 8)
-                    stroke(knob, Color3.fromRGB(20, 22, 18), 3, 0)
+                    stroke(knob, Color3.fromRGB(12, 8, 18), 3, 0)
 
                     local sliding = false
                     local api = { Value = value }
@@ -1503,7 +1506,7 @@ function VoidUI:CreateWindow(cfg)
                         AutoButtonColor = false,
                         Font = Fonts.Title,
                         TextSize = 13,
-                        TextColor3 = Color3.fromRGB(18, 20, 14),
+                        TextColor3 = Color3.new(1, 1, 1),
                         Text = o.Title or "Button",
                         Size = UDim2.fromScale(1, 1),
                         Parent = row,
