@@ -6,7 +6,7 @@
 
 -- HttpGet (แนะนำ) — ไม่พึ่ง readfile
 -- cache-bust เมื่ออัป version (executor มัก cache raw เก่า)
-local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua?v=1.3.1"
+local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/main/VoidUI.lua?v=1.3.2"
 
 local function loadLib()
     local ok, body = pcall(function()
@@ -41,7 +41,7 @@ local Window = VoidUI:CreateWindow({
     Author = "discord.gg/voidw0rld",
     Icon = "rbxassetid://111627748770819", -- hub logo (Tap Sim / brand)
     Accent = Color3.fromRGB(168, 85, 247), -- void purple
-    Size = UDim2.fromOffset(680, 540),
+    Size = UDim2.fromOffset(700, 560),
     Transparent = true,
     ToggleKey = Enum.KeyCode.G,
     Folder = "VoidUI_Demo",

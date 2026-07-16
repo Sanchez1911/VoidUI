@@ -16,7 +16,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.3.1",
+    Version = "1.3.2",
     _windows = {},
 }
 
@@ -27,6 +27,7 @@ local RunService = game:GetService("RunService")
 local HttpService = game:GetService("HttpService")
 local TextService = game:GetService("TextService")
 local CoreGui = game:GetService("CoreGui")
+local GuiService = game:GetService("GuiService")
 
 local LP = Players.LocalPlayer
 local Mouse = LP:GetMouse()
@@ -903,7 +904,7 @@ function VoidUI:CreateWindow(cfg)
                 Visible = false,
                 Parent = pageHost,
             })
-            pad(frame, 10, 18, 28, 18)
+            pad(frame, 12, 20, 40, 20)
 
             -- two-column optional layout container
             local body = mk("Frame", {
@@ -1340,6 +1341,7 @@ function VoidUI:CreateWindow(cfg)
 
                     local open = false
                     local menu
+                    local openToken = 0
 
                     local api = {
                         Value = current,
@@ -1365,27 +1367,38 @@ function VoidUI:CreateWindow(cfg)
                         if o.Callback then task.spawn(o.Callback, current) end
                     end
 
+                    -- IgnoreGuiInset ScreenGui AbsolutePosition is inset-free;
+                    -- GetMouseLocation includes topbar — must subtract or bottom row fails hit-tests.
+                    local function mouseGuiPos()
+                        return UserInputService:GetMouseLocation() - GuiService:GetGuiInset()
+                    end
+
+                    local function pointIn(gui, p)
+                        local a = gui.AbsolutePosition
+                        local s = gui.AbsoluteSize
+                        return p.X >= a.X and p.X <= a.X + s.X and p.Y >= a.Y and p.Y <= a.Y + s.Y
+                    end
+
                     local function openMenu()
                         if open then closeMenu() return end
                         open = true
+                        openToken += 1
 
                         local abs = box.AbsolutePosition
                         local boxSz = box.AbsoluteSize
-                        local itemH = 30
-                        local padY = 12
-                        local menuH = math.min(padY + #values * itemH, 240)
-                        local menuW = math.max(boxSz.X, 168)
+                        local itemH = 32
+                        local gap = 3
+                        local padTop, padBot = 8, 10
+                        local menuH = padTop + padBot + #values * itemH + math.max(0, #values - 1) * gap
+                        local menuW = math.max(boxSz.X, 172)
 
-                        -- open upward when near bottom so last items stay clickable
                         local screenH = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 1080
                         local spaceBelow = screenH - (abs.Y + boxSz.Y)
-                        local openUp = spaceBelow < (menuH + 12)
-                        local posX = abs.X + boxSz.X - menuW
+                        local openUp = spaceBelow < (menuH + 16)
+                        local posX = math.max(8, abs.X + boxSz.X - menuW)
                         local posY = openUp and (abs.Y - menuH - 6) or (abs.Y + boxSz.Y + 6)
-                        posX = math.max(8, posX)
                         posY = math.max(8, posY)
 
-                        -- parent to ScreenGui (not Main) — avoids ClipsDescendants eating bottom items
                         menu = mk("Frame", {
                             BackgroundColor3 = T.BgSection,
                             BorderSizePixel = 0,
@@ -1395,44 +1408,41 @@ function VoidUI:CreateWindow(cfg)
                             Parent = screen,
                         })
                         corner(menu, 10)
-                        stroke(menu, accent, 1, 0.65)
-                        local sc = mk("ScrollingFrame", {
+                        stroke(menu, accent, 1, 0.55)
+                        pad(menu, padTop, 8, padBot, 8)
+
+                        local listHost = mk("Frame", {
                             BackgroundTransparency = 1,
-                            BorderSizePixel = 0,
                             Size = UDim2.fromScale(1, 1),
-                            ScrollBarThickness = 3,
-                            ScrollBarImageColor3 = T.TextMute,
-                            CanvasSize = UDim2.new(0, 0, 0, 0),
-                            AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                            Active = true,
                             ZIndex = 501,
                             Parent = menu,
                         })
-                        pad(sc, 6, 6, 6, 6)
-                        list(sc, Enum.FillDirection.Vertical, 2)
+                        list(listHost, Enum.FillDirection.Vertical, gap)
 
                         for _, v in ipairs(values) do
+                            local selected = isSelected(v)
                             local item = mk("TextButton", {
-                                BackgroundColor3 = isSelected(v) and accent or T.BgInput,
-                                BackgroundTransparency = isSelected(v) and 0.55 or 0.25,
+                                BackgroundColor3 = selected and accent or T.BgInput,
+                                BackgroundTransparency = selected and 0.35 or 0.2,
                                 AutoButtonColor = false,
                                 Active = true,
                                 Text = "",
-                                Size = UDim2.new(1, 0, 0, 28),
+                                Size = UDim2.new(1, 0, 0, itemH),
                                 ZIndex = 502,
-                                Parent = sc,
+                                Parent = listHost,
                             })
-                            corner(item, 7)
+                            corner(item, 8)
                             mk("TextLabel", {
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Body,
                                 TextSize = 12,
-                                TextColor3 = isSelected(v) and Color3.new(1, 1, 1) or T.Text,
+                                TextColor3 = selected and Color3.new(1, 1, 1) or T.Text,
                                 TextXAlignment = Enum.TextXAlignment.Left,
                                 Text = tostring(v),
-                                Size = UDim2.new(1, -12, 1, 0),
-                                Position = UDim2.fromOffset(10, 0),
+                                Size = UDim2.new(1, -14, 1, 0),
+                                Position = UDim2.fromOffset(12, 0),
                                 ZIndex = 503,
+                                Active = false,
                                 Parent = item,
                             })
                             item.MouseButton1Click:Connect(function()
@@ -1447,10 +1457,10 @@ function VoidUI:CreateWindow(cfg)
                                         table.insert(current, v)
                                     end
                                     api.Value = current
-                                    closeMenu()
-                                    openMenu()
                                     txt.Text = labelText()
                                     fire()
+                                    closeMenu()
+                                    task.defer(openMenu)
                                 else
                                     current = v
                                     api.Value = current
@@ -1481,19 +1491,15 @@ function VoidUI:CreateWindow(cfg)
                     end
 
                     UserInputService.InputBegan:Connect(function(input)
-                        if open and input.UserInputType == Enum.UserInputType.MouseButton1 then
-                            task.defer(function()
-                                if not open or not menu then return end
-                                local m = UserInputService:GetMouseLocation()
-                                local abs = menu.AbsolutePosition
-                                local sz = menu.AbsoluteSize
-                                local inMenu = m.X >= abs.X and m.X <= abs.X + sz.X and m.Y >= abs.Y and m.Y <= abs.Y + sz.Y
-                                local babs = box.AbsolutePosition
-                                local bsz = box.AbsoluteSize
-                                local inBox = m.X >= babs.X and m.X <= babs.X + bsz.X and m.Y >= babs.Y and m.Y <= babs.Y + bsz.Y
-                                if not inMenu and not inBox then closeMenu() end
-                            end)
-                        end
+                        if not open or not menu then return end
+                        if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+                        local tokenAtClick = openToken
+                        task.delay(0.05, function()
+                            if tokenAtClick ~= openToken or not open or not menu then return end
+                            local p = mouseGuiPos()
+                            if pointIn(menu, p) or pointIn(box, p) then return end
+                            closeMenu()
+                        end)
                     end)
 
                     if o.Flag then Window._flags[o.Flag] = api end
