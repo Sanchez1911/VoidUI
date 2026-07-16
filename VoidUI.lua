@@ -14,7 +14,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.6.1",
+    Version = "1.6.2",
     _windows = {},
 }
 
@@ -895,59 +895,179 @@ function VoidUI:CreateWindow(cfg)
         _openBtn = nil,
     }
 
+    -- Search = command palette: results drop down as a list; click jumps there
+    local searchPanel
+
+    local function closeSearchPanel()
+        if searchPanel then
+            searchPanel:Destroy()
+            searchPanel = nil
+        end
+    end
+
+    local function navigateTo(e)
+        closeSearchPanel()
+        if setSearchOpen then setSearchOpen(false, false) end
+        Window:SetVisible(true)
+        if e.Tab then Window:SelectTab(e.Tab) end
+        if e.Tab and e.Page and e.Tab.SelectPage then e.Tab:SelectPage(e.Page) end
+        -- scroll to the row + flash it after layout settles
+        task.defer(function()
+            task.wait(0.05)
+            local frame = e.Page and e.Page.Frame
+            local row = e.Row
+            if not (frame and row and row.Parent) then return end
+            local y = row.AbsolutePosition.Y - frame.AbsolutePosition.Y + frame.CanvasPosition.Y - 64
+            frame.CanvasPosition = Vector2.new(0, math.max(0, y))
+            local flash = mk("Frame", {
+                BackgroundColor3 = accent,
+                BackgroundTransparency = 0.72,
+                Size = UDim2.fromScale(1, 1),
+                ZIndex = 5,
+                Parent = row,
+            })
+            corner(flash, 10)
+            task.delay(0.35, function()
+                if flash.Parent then
+                    local tw = tween(flash, TI(0.8), { BackgroundTransparency = 1 })
+                    tw.Completed:Wait()
+                    flash:Destroy()
+                end
+            end)
+        end)
+    end
+
     local function applySearch(query)
         query = string.lower(tostring(query or "")):gsub("^%s+", ""):gsub("%s+$", "")
         Window._searchQuery = query
-        local searching = query ~= ""
+        closeSearchPanel()
 
-        local wrapVis = {}
-        local tabHits = {}
-        local matchN = 0
-        for _, e in ipairs(Window._searchEntries) do
-            local hit = (not searching) or (string.find(e.Text, query, 1, true) ~= nil)
-            if e.Row and e.Row.Parent then
-                e.Row.Visible = hit
-                if hit and searching and e.Text ~= "" then
-                    matchN = matchN + 1
-                end
+        if query == "" then
+            if searchCountLbl then
+                searchCountLbl.Text = ""
+                searchCountLbl.Visible = false
             end
-            if e.Divider and e.Divider.Parent then
-                e.Divider.Visible = not searching
-            end
-            if e.Wrap then
-                wrapVis[e.Wrap] = wrapVis[e.Wrap] or false
-                if hit and e.Row then wrapVis[e.Wrap] = true end
-            end
-            if hit and e.Tab and e.Row then
-                tabHits[e.Tab] = true
-            end
+            return
         end
-        for wrap, vis in pairs(wrapVis) do
-            if wrap and wrap.Parent then
-                wrap.Visible = (not searching) or vis
+
+        local matches = {}
+        for _, e in ipairs(Window._searchEntries) do
+            if e.Row and e.Row.Parent and e.Text ~= "" and string.find(e.Text, query, 1, true) then
+                matches[#matches + 1] = e
+                if #matches >= 30 then break end
             end
         end
 
         if searchCountLbl then
-            if searching then
-                searchCountLbl.Text = tostring(matchN)
-                searchCountLbl.Visible = true
-            else
-                searchCountLbl.Text = ""
-                searchCountLbl.Visible = false
-            end
+            searchCountLbl.Text = tostring(#matches)
+            searchCountLbl.Visible = true
         end
 
-        if searching then
-            local active = Window._activeTab
-            if active and not tabHits[active] then
-                for _, t in ipairs(Window._tabs) do
-                    if tabHits[t] then
-                        Window:SelectTab(t)
-                        break
-                    end
-                end
-            end
+        if not searchHost then return end
+        local abs = searchHost.AbsolutePosition
+        local hostSz = searchHost.AbsoluteSize
+
+        local itemH = 44
+        local gap = 2
+        local padV = 6
+        local shown = math.min(#matches, 6)
+        local listH = (shown == 0) and 36 or (shown * itemH + math.max(0, shown - 1) * gap)
+        local panelW = 280
+        local panelH = listH + padV * 2
+
+        searchPanel = mk("Frame", {
+            Name = "SearchResults",
+            BackgroundColor3 = Color3.fromRGB(16, 14, 22),
+            BorderSizePixel = 0,
+            Position = UDim2.fromOffset(abs.X + hostSz.X - panelW, abs.Y + hostSz.Y + 8),
+            Size = UDim2.fromOffset(panelW, panelH),
+            ZIndex = 600,
+            Parent = screen,
+        })
+        corner(searchPanel, 14)
+        stroke(searchPanel, Color3.fromRGB(52, 48, 64), 1, 0.5)
+        pad(searchPanel, padV, 6, padV, 6)
+
+        if #matches == 0 then
+            mk("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Fonts.Body,
+                TextSize = 12,
+                TextColor3 = T.TextMute,
+                Text = "No results",
+                Size = UDim2.fromScale(1, 1),
+                ZIndex = 601,
+                Parent = searchPanel,
+            })
+            return
+        end
+
+        local host = mk("ScrollingFrame", {
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Size = UDim2.fromScale(1, 1),
+            ScrollBarThickness = 2,
+            ScrollBarImageColor3 = T.TextMute,
+            ScrollBarImageTransparency = 0.4,
+            CanvasSize = UDim2.fromOffset(0, #matches * itemH + math.max(0, #matches - 1) * gap),
+            ScrollingEnabled = #matches > shown,
+            ZIndex = 601,
+            Parent = searchPanel,
+        })
+        list(host, Enum.FillDirection.Vertical, gap)
+
+        for _, e in ipairs(matches) do
+            local item = mk("TextButton", {
+                BackgroundColor3 = Color3.fromRGB(28, 24, 38),
+                BackgroundTransparency = 1,
+                AutoButtonColor = false,
+                Text = "",
+                Size = UDim2.new(1, 0, 0, itemH),
+                ZIndex = 602,
+                Parent = host,
+            })
+            corner(item, 10)
+
+            local ic = makeIcon(item, "lucide:corner-down-right", 13, T.TextMute, 603)
+            ic.AnchorPoint = Vector2.new(0, 0.5)
+            ic.Position = UDim2.new(0, 10, 0.5, 0)
+
+            mk("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Fonts.Title,
+                TextSize = 13,
+                TextColor3 = T.Text,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                Text = e.Title,
+                Position = UDim2.fromOffset(32, 6),
+                Size = UDim2.new(1, -40, 0, 16),
+                ZIndex = 603,
+                Parent = item,
+            })
+            mk("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Fonts.Desc,
+                TextSize = 11,
+                TextColor3 = T.TextMute,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                Text = e.TabTitle .. "  ·  " .. e.Section,
+                Position = UDim2.fromOffset(32, 23),
+                Size = UDim2.new(1, -40, 0, 14),
+                ZIndex = 603,
+                Parent = item,
+            })
+
+            item.MouseEnter:Connect(function()
+                tween(item, TI(0.1), { BackgroundTransparency = 0.4 })
+            end)
+            item.MouseLeave:Connect(function()
+                tween(item, TI(0.1), { BackgroundTransparency = 1 })
+            end)
+            item.MouseButton1Click:Connect(function()
+                navigateTo(e)
+            end)
         end
     end
 
@@ -965,6 +1085,12 @@ function VoidUI:CreateWindow(cfg)
     if searchBox then
         searchBox:GetPropertyChangedSignal("Text"):Connect(function()
             applySearch(searchBox.Text)
+        end)
+        -- dragging the window would leave the panel floating at a stale spot
+        topBar.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                closeSearchPanel()
+            end
         end)
         -- / or Ctrl+F opens find
         UserInputService.InputBegan:Connect(function(input, gp)
@@ -998,6 +1124,10 @@ function VoidUI:CreateWindow(cfg)
         self.Visible = v and true or false
         main.Visible = self.Visible
         shadow.Visible = self.Visible
+        if not self.Visible then
+            closeSearchPanel()
+            if setSearchOpen then setSearchOpen(false, false) end
+        end
         if self._openBtn then
             self._openBtn.Visible = true
             if self._styleOpenOrb then
@@ -1469,19 +1599,16 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.new(1, -6, 0, 1),
                         Parent = d,
                     })
-                    table.insert(Window._searchEntries, {
-                        Divider = d,
-                        Wrap = wrap,
-                        Tab = Tab,
-                        Text = "",
-                    })
                 end
 
                 local function registerSearch(row, titleText, descText)
                     table.insert(Window._searchEntries, {
                         Row = row,
-                        Wrap = wrap,
                         Tab = Tab,
+                        Page = Page,
+                        Title = tostring(titleText or ""),
+                        Section = tostring(secTitle or ""),
+                        TabTitle = tostring(tabTitle or ""),
                         Text = string.lower(table.concat({
                             tostring(titleText or ""),
                             " ",
