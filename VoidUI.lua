@@ -17,7 +17,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.5.3",
+    Version = "1.5.4",
     _windows = {},
 }
 
@@ -480,6 +480,14 @@ end
 ---------------------------------------------------------------------------
 function VoidUI:CreateWindow(cfg)
     cfg = cfg or {}
+    -- drop previous windows so a failed/partial run doesn't leave a blank shell
+    for i = #VoidUI._windows, 1, -1 do
+        local w = VoidUI._windows[i]
+        pcall(function()
+            if w and w.Destroy then w:Destroy() end
+        end)
+        VoidUI._windows[i] = nil
+    end
     -- load lucide pack once (cached) so sidebar icons aren't blank on first paint
     loadIconPack("lucide")
 
@@ -531,17 +539,19 @@ function VoidUI:CreateWindow(cfg)
         Parent = screen,
     })
 
-    -- CanvasGroup clips children to rounded corners (fixes sharp left sidebar)
-    local main = Instance.new("CanvasGroup")
-    main.Name = "Main"
-    main.BackgroundColor3 = T.Bg
-    main.BackgroundTransparency = glass
-    main.BorderSizePixel = 0
-    main.AnchorPoint = Vector2.new(0.5, 0.5)
-    main.Position = UDim2.fromScale(0.5, 0.5)
-    main.Size = size
-    main.ZIndex = 1
-    main.Parent = screen
+    -- Frame + clip (CanvasGroup blanks content on some executors)
+    local main = mk("Frame", {
+        Name = "Main",
+        BackgroundColor3 = T.Bg,
+        BackgroundTransparency = glass,
+        BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = size,
+        ZIndex = 1,
+        ClipsDescendants = true,
+        Parent = screen,
+    })
     corner(main, cornerR)
     stroke(main, Color3.fromRGB(28, 26, 34), 1, 0.72)
 
