@@ -15,7 +15,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.6.6",
+    Version = "1.6.7",
     _windows = {},
 }
 
@@ -2309,36 +2309,37 @@ function VoidUI:CreateWindow(cfg)
                     local style = string.lower(tostring(o.Style or "clean"))
                     local iconName = o.Icon or "lucide:play"
 
-                    -- Clean row — same chrome as Toggle/Dropdown
+                    -- Clean row — whole row is clickable (not just the icon)
                     if style == "clean" or style == "row" or style == "icon" then
                         local row, _, right = makeRow(o.Title or "Button", o.Desc)
                         right.Size = UDim2.fromOffset(30, 30)
 
-                        local b = mk("TextButton", {
-                            BackgroundColor3 = Color3.fromRGB(32, 28, 42),
+                        local ih, img = makeIcon(right, iconName, 16, T.TextDim, 2)
+                        ih.AnchorPoint = Vector2.new(0.5, 0.5)
+                        ih.Position = UDim2.fromScale(0.5, 0.5)
+
+                        local hitBg = row:FindFirstChildWhichIsA("Frame") -- first child is hover bg from makeRow
+                        local hit = mk("TextButton", {
                             BackgroundTransparency = 1,
                             AutoButtonColor = false,
                             Text = "",
                             Size = UDim2.fromScale(1, 1),
-                            Parent = right,
+                            ZIndex = 25,
+                            Parent = row,
                         })
-                        corner(b, 10)
 
-                        local ih, img = makeIcon(b, iconName, 16, T.TextDim, 2)
-                        ih.AnchorPoint = Vector2.new(0.5, 0.5)
-                        ih.Position = UDim2.fromScale(0.5, 0.5)
-
-                        hover(b, function()
-                            tween(b, TI(0.12), { BackgroundTransparency = 0.55, BackgroundColor3 = T.BgHover })
-                            setIconColor(img, accent)
-                        end, function()
-                            tween(b, TI(0.12), { BackgroundTransparency = 1 })
-                            setIconColor(img, T.TextDim)
-                        end)
-                        b.MouseButton1Click:Connect(function()
+                        local function setHover(on)
+                            if hitBg then
+                                tween(hitBg, TI(0.12), { BackgroundTransparency = on and 0.78 or 1 })
+                            end
+                            setIconColor(img, on and accent or T.TextDim)
+                        end
+                        hit.MouseEnter:Connect(function() setHover(true) end)
+                        hit.MouseLeave:Connect(function() setHover(false) end)
+                        hit.MouseButton1Click:Connect(function()
                             if o.Callback then task.spawn(o.Callback) end
                         end)
-                        return b
+                        return hit
                     end
 
                     -- Filled CTA (optional)
