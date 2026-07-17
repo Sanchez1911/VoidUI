@@ -14,7 +14,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.6.3",
+    Version = "1.6.4",
     _windows = {},
 }
 
@@ -2032,15 +2032,26 @@ function VoidUI:CreateWindow(cfg)
                         local itemH = 30
                         local gap = 2
                         local padTop, padBot = 6, 8
-                        local menuH = padTop + padBot + #values * itemH + math.max(0, #values - 1) * gap
-                        local menuW = math.max(boxSz.X, 168)
+                        local searchH = 0
+                        local wantFilter = (o.Search ~= false) and (#values >= 6 or o.Search == true)
+                        if wantFilter then searchH = 34 end
 
+                        local maxListH = math.floor((workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 720) * 0.38)
+                        maxListH = math.clamp(maxListH, 160, 280)
+                        local fullListH = #values * itemH + math.max(0, #values - 1) * gap
+                        local listH = math.min(fullListH, maxListH)
+                        local menuW = math.max(boxSz.X, 200)
+                        local menuH = padTop + padBot + searchH + listH
+
+                        -- GuiInset-safe place (same ScreenGui IgnoreGuiInset)
+                        local inset = GuiService:GetGuiInset()
+                        local posX = abs.X + (screen.IgnoreGuiInset and inset.X or 0)
+                        local posYBelow = abs.Y + boxSz.Y + 6 + (screen.IgnoreGuiInset and inset.Y or 0)
+                        local posYAbove = abs.Y - menuH - 6 + (screen.IgnoreGuiInset and inset.Y or 0)
                         local screenH = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 1080
-                        local spaceBelow = screenH - (abs.Y + boxSz.Y)
-                        local openUp = spaceBelow < (menuH + 16)
-                        local posX = math.max(8, abs.X + boxSz.X - menuW)
-                        local posY = openUp and (abs.Y - menuH - 6) or (abs.Y + boxSz.Y + 6)
-                        posY = math.max(8, posY)
+                        local openUp = (posYBelow + menuH + 12) > screenH and posYAbove > 8
+                        local posXFinal = math.clamp(posX + boxSz.X - menuW, 8, math.max(8, (workspace.CurrentCamera.ViewportSize.X or 1280) - menuW - 8))
+                        local posY = openUp and math.max(8, posYAbove) or math.max(8, posYBelow)
 
                         dismiss = mk("TextButton", {
                             BackgroundTransparency = 1,
@@ -2060,7 +2071,7 @@ function VoidUI:CreateWindow(cfg)
                             ImageTransparency = 0.55,
                             ScaleType = Enum.ScaleType.Slice,
                             SliceCenter = Rect.new(49, 49, 450, 450),
-                            Position = UDim2.fromOffset(posX - 10, posY - 8),
+                            Position = UDim2.fromOffset(posXFinal - 10, posY - 8),
                             Size = UDim2.fromOffset(menuW + 20, menuH + 20),
                             ZIndex = 500,
                             Parent = screen,
@@ -2069,7 +2080,7 @@ function VoidUI:CreateWindow(cfg)
                         menu = mk("Frame", {
                             BackgroundColor3 = Color3.fromRGB(16, 14, 22),
                             BorderSizePixel = 0,
-                            Position = UDim2.fromOffset(posX, posY),
+                            Position = UDim2.fromOffset(posXFinal, posY),
                             Size = UDim2.fromOffset(menuW, menuH),
                             ZIndex = 501,
                             Parent = screen,
@@ -2078,95 +2089,183 @@ function VoidUI:CreateWindow(cfg)
                         stroke(menu, Color3.fromRGB(48, 46, 58), 1, 0.6)
                         pad(menu, padTop, 6, padBot, 6)
 
-                        local listHost = mk("Frame", {
-                            BackgroundTransparency = 1,
-                            Size = UDim2.fromScale(1, 1),
-                            ZIndex = 502,
-                            Parent = menu,
-                        })
-                        list(listHost, Enum.FillDirection.Vertical, gap)
-
-                        for _, v in ipairs(values) do
-                            local selected = isSelected(v)
-                            local item = mk("TextButton", {
-                                BackgroundColor3 = selected and accent or Color3.fromRGB(28, 24, 38),
-                                BackgroundTransparency = selected and 0.82 or 1,
-                                AutoButtonColor = false,
-                                Active = true,
-                                Text = "",
-                                Size = UDim2.new(1, 0, 0, itemH),
-                                ZIndex = 503,
-                                Parent = listHost,
-                            })
-                            corner(item, 8)
-
-                            local mark = mk("Frame", {
-                                BackgroundColor3 = accent,
-                                BackgroundTransparency = selected and 0 or 1,
-                                BorderSizePixel = 0,
-                                Size = UDim2.new(0, 2, 1, -10),
-                                Position = UDim2.fromOffset(4, 5),
-                                ZIndex = 504,
-                                Parent = item,
-                            })
-                            corner(mark, 1)
-
-                            mk("TextLabel", {
-                                BackgroundTransparency = 1,
-                                Font = selected and Fonts.Title or Fonts.Body,
-                                TextSize = 12,
-                                TextColor3 = selected and Color3.fromRGB(236, 228, 255) or T.Text,
-                                TextXAlignment = Enum.TextXAlignment.Left,
-                                Text = tostring(v),
-                                Size = UDim2.new(1, -36, 1, 0),
-                                Position = UDim2.fromOffset(14, 0),
-                                ZIndex = 504,
-                                Active = false,
-                                Parent = item,
-                            })
-
-                            if selected then
-                                local chk = makeIcon(item, "lucide:check", 13, accent, 505)
-                                chk.AnchorPoint = Vector2.new(1, 0.5)
-                                chk.Position = UDim2.new(1, -8, 0.5, 0)
+                        local filterQ = ""
+                        local scroll
+                        local function rebuildList()
+                            if scroll then scroll:Destroy() end
+                            local filtered = {}
+                            local q = string.lower(filterQ)
+                            for _, v in ipairs(values) do
+                                if q == "" or string.find(string.lower(tostring(v)), q, 1, true) then
+                                    filtered[#filtered + 1] = v
+                                end
                             end
 
-                            item.MouseEnter:Connect(function()
-                                if not isSelected(v) then
-                                    tween(item, TI(0.1), { BackgroundTransparency = 0.88, BackgroundColor3 = Color3.fromRGB(36, 30, 50) })
-                                end
-                            end)
-                            item.MouseLeave:Connect(function()
-                                if not isSelected(v) then
-                                    tween(item, TI(0.1), { BackgroundTransparency = 1 })
-                                end
-                            end)
+                            local fH = #filtered * itemH + math.max(0, #filtered - 1) * gap
+                            local viewH = math.min(math.max(fH, itemH), maxListH)
+                            -- resize menu to filtered height
+                            local newMenuH = padTop + padBot + searchH + viewH
+                            menu.Size = UDim2.fromOffset(menuW, newMenuH)
+                            if menuShadow then
+                                menuShadow.Size = UDim2.fromOffset(menuW + 20, newMenuH + 20)
+                            end
 
-                            item.MouseButton1Click:Connect(function()
-                                if multi then
-                                    local found
-                                    for i, x in ipairs(current) do
-                                        if x == v then found = i break end
-                                    end
-                                    if found then
-                                        table.remove(current, found)
-                                    else
-                                        table.insert(current, v)
-                                    end
-                                    api.Value = current
-                                    txt.Text = labelText()
-                                    fire()
-                                    closeMenu()
-                                    task.defer(openMenu)
-                                else
-                                    current = v
-                                    api.Value = current
-                                    txt.Text = labelText()
-                                    closeMenu()
-                                    fire()
+                            scroll = mk("ScrollingFrame", {
+                                BackgroundTransparency = 1,
+                                BorderSizePixel = 0,
+                                Position = UDim2.fromOffset(0, searchH),
+                                Size = UDim2.new(1, 0, 0, viewH),
+                                CanvasSize = UDim2.fromOffset(0, fH),
+                                ScrollBarThickness = 3,
+                                ScrollBarImageColor3 = accent,
+                                ScrollBarImageTransparency = 0.35,
+                                ScrollingEnabled = fH > viewH,
+                                ZIndex = 502,
+                                Parent = menu,
+                            })
+                            local listHost = mk("Frame", {
+                                BackgroundTransparency = 1,
+                                Size = UDim2.new(1, 0, 0, fH),
+                                ZIndex = 503,
+                                Parent = scroll,
+                            })
+                            list(listHost, Enum.FillDirection.Vertical, gap)
+
+                            if #filtered == 0 then
+                                mk("TextLabel", {
+                                    BackgroundTransparency = 1,
+                                    Font = Fonts.Body,
+                                    TextSize = 12,
+                                    TextColor3 = T.TextMute,
+                                    Text = "No matches",
+                                    Size = UDim2.new(1, 0, 0, itemH),
+                                    ZIndex = 504,
+                                    Parent = listHost,
+                                })
+                                return
+                            end
+
+                            for _, v in ipairs(filtered) do
+                                local selected = isSelected(v)
+                                local item = mk("TextButton", {
+                                    BackgroundColor3 = selected and accent or Color3.fromRGB(28, 24, 38),
+                                    BackgroundTransparency = selected and 0.82 or 1,
+                                    AutoButtonColor = false,
+                                    Active = true,
+                                    Text = "",
+                                    Size = UDim2.new(1, 0, 0, itemH),
+                                    ZIndex = 504,
+                                    Parent = listHost,
+                                })
+                                corner(item, 8)
+
+                                local mark = mk("Frame", {
+                                    BackgroundColor3 = accent,
+                                    BackgroundTransparency = selected and 0 or 1,
+                                    BorderSizePixel = 0,
+                                    Size = UDim2.new(0, 2, 1, -10),
+                                    Position = UDim2.fromOffset(4, 5),
+                                    ZIndex = 505,
+                                    Parent = item,
+                                })
+                                corner(mark, 1)
+
+                                mk("TextLabel", {
+                                    BackgroundTransparency = 1,
+                                    Font = selected and Fonts.Title or Fonts.Body,
+                                    TextSize = 12,
+                                    TextColor3 = selected and Color3.fromRGB(236, 228, 255) or T.Text,
+                                    TextXAlignment = Enum.TextXAlignment.Left,
+                                    TextTruncate = Enum.TextTruncate.AtEnd,
+                                    Text = tostring(v),
+                                    Size = UDim2.new(1, -36, 1, 0),
+                                    Position = UDim2.fromOffset(14, 0),
+                                    ZIndex = 505,
+                                    Active = false,
+                                    Parent = item,
+                                })
+
+                                if selected then
+                                    local chk = makeIcon(item, "lucide:check", 13, accent, 506)
+                                    chk.AnchorPoint = Vector2.new(1, 0.5)
+                                    chk.Position = UDim2.new(1, -8, 0.5, 0)
                                 end
+
+                                item.MouseEnter:Connect(function()
+                                    if not isSelected(v) then
+                                        tween(item, TI(0.1), { BackgroundTransparency = 0.88, BackgroundColor3 = Color3.fromRGB(36, 30, 50) })
+                                    end
+                                end)
+                                item.MouseLeave:Connect(function()
+                                    if not isSelected(v) then
+                                        tween(item, TI(0.1), { BackgroundTransparency = 1 })
+                                    end
+                                end)
+
+                                item.MouseButton1Click:Connect(function()
+                                    if multi then
+                                        local found
+                                        for i, x in ipairs(current) do
+                                            if x == v then found = i break end
+                                        end
+                                        if found then
+                                            table.remove(current, found)
+                                        else
+                                            table.insert(current, v)
+                                        end
+                                        api.Value = current
+                                        txt.Text = labelText()
+                                        fire()
+                                        rebuildList()
+                                    else
+                                        current = v
+                                        api.Value = current
+                                        txt.Text = labelText()
+                                        closeMenu()
+                                        fire()
+                                    end
+                                end)
+                            end
+                        end
+
+                        if wantFilter then
+                            local searchBar = mk("Frame", {
+                                BackgroundColor3 = Color3.fromRGB(24, 20, 32),
+                                Size = UDim2.new(1, 0, 0, 28),
+                                ZIndex = 502,
+                                Parent = menu,
+                            })
+                            corner(searchBar, 8)
+                            stroke(searchBar, Color3.fromRGB(48, 46, 58), 1, 0.55)
+                            local sIcon = makeIcon(searchBar, "lucide:search", 13, T.TextMute, 503)
+                            sIcon.Position = UDim2.fromOffset(8, 7)
+                            local sBox = mk("TextBox", {
+                                BackgroundTransparency = 1,
+                                Font = Fonts.Body,
+                                TextSize = 12,
+                                TextColor3 = T.Text,
+                                PlaceholderText = "Search…",
+                                PlaceholderColor3 = T.TextMute,
+                                Text = "",
+                                ClearTextOnFocus = false,
+                                Position = UDim2.fromOffset(28, 0),
+                                Size = UDim2.new(1, -34, 1, 0),
+                                TextXAlignment = Enum.TextXAlignment.Left,
+                                ZIndex = 503,
+                                Parent = searchBar,
+                            })
+                            -- don't dismiss when clicking search
+                            sBox.Focused:Connect(function() end)
+                            sBox:GetPropertyChangedSignal("Text"):Connect(function()
+                                filterQ = sBox.Text
+                                rebuildList()
+                            end)
+                            task.defer(function()
+                                sBox:CaptureFocus()
                             end)
                         end
+
+                        rebuildList()
                     end
 
                     box.MouseButton1Click:Connect(openMenu)
