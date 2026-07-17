@@ -14,7 +14,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.6.4",
+    Version = "1.6.5",
     _windows = {},
 }
 
@@ -2591,6 +2591,15 @@ function VoidUI:CreateWindow(cfg)
                 Page.Frame.Visible = true
                 Page._active = true
             end
+            -- Tab() with Selected=true runs SelectTab before any Page exists,
+            -- so subtabs never appear until user re-clicks. Refresh when pages grow.
+            if Window._activeTab == Tab then
+                if #Tab._pages >= 2 then
+                    Window:SelectTab(Tab)
+                elseif #Tab._pages == 1 then
+                    Tab:SelectPage(Page)
+                end
+            end
             return Page
         end
 
@@ -2608,7 +2617,12 @@ function VoidUI:CreateWindow(cfg)
 
         table.insert(Window._tabs, Tab)
         if selected or #Window._tabs == 1 then
-            Window:SelectTab(Tab)
+            -- defer so Pages added right after Tab() are visible to SelectTab
+            task.defer(function()
+                if Tab.Host and Tab.Host.Parent then
+                    Window:SelectTab(Tab)
+                end
+            end)
         else
             Tab:_setActive(false)
         end
