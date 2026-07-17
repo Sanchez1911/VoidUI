@@ -9,12 +9,13 @@
         Transparency=0.16, Bloom=true, Search=true, OpenButton=true,
         ToggleKey=Enum.KeyCode.G,
       })
-      S:Button({ Title=..., Icon="lucide:save", Style="Accent"|"Soft"|"Ghost", Desc=..., Callback=fn })
+      S:Button({ Title=..., Icon="lucide:play", Desc=..., Callback=fn }) -- clean row (default)
+      S:Button({ Title=..., Style="Accent", Icon=..., Callback=fn }) -- optional filled CTA
       W:Search("train") / W:SetTransparency(0.2) / W:Toggle()
 ]]
 
 local VoidUI = {
-    Version = "1.6.5",
+    Version = "1.6.6",
     _windows = {},
 }
 
@@ -2300,35 +2301,71 @@ function VoidUI:CreateWindow(cfg)
                 end
 
                 -----------------------------------------------------------------
-                -- Button
+                -- Button (default = WindUI-clean row: title/desc + action icon)
+                -- Style: "Clean" (default) | "Accent" | "Soft" | "Ghost" (filled CTA)
                 -----------------------------------------------------------------
                 function Section:Button(o)
                     o = o or {}
+                    local style = string.lower(tostring(o.Style or "clean"))
+                    local iconName = o.Icon or "lucide:play"
+
+                    -- Clean row — same chrome as Toggle/Dropdown
+                    if style == "clean" or style == "row" or style == "icon" then
+                        local row, _, right = makeRow(o.Title or "Button", o.Desc)
+                        right.Size = UDim2.fromOffset(30, 30)
+
+                        local b = mk("TextButton", {
+                            BackgroundColor3 = Color3.fromRGB(32, 28, 42),
+                            BackgroundTransparency = 1,
+                            AutoButtonColor = false,
+                            Text = "",
+                            Size = UDim2.fromScale(1, 1),
+                            Parent = right,
+                        })
+                        corner(b, 10)
+
+                        local ih, img = makeIcon(b, iconName, 16, T.TextDim, 2)
+                        ih.AnchorPoint = Vector2.new(0.5, 0.5)
+                        ih.Position = UDim2.fromScale(0.5, 0.5)
+
+                        hover(b, function()
+                            tween(b, TI(0.12), { BackgroundTransparency = 0.55, BackgroundColor3 = T.BgHover })
+                            setIconColor(img, accent)
+                        end, function()
+                            tween(b, TI(0.12), { BackgroundTransparency = 1 })
+                            setIconColor(img, T.TextDim)
+                        end)
+                        b.MouseButton1Click:Connect(function()
+                            if o.Callback then task.spawn(o.Callback) end
+                        end)
+                        return b
+                    end
+
+                    -- Filled CTA (optional)
                     addDivider()
                     rowOrder = rowOrder + 1
                     local row = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 0, o.Desc and 58 or 46),
+                        Size = UDim2.new(1, 0, 0, o.Desc and 52 or 42),
                         LayoutOrder = rowOrder,
                         Parent = card,
                     })
                     pad(row, 6, 6, 6, 6)
                     registerSearch(row, o.Title or "Button", o.Desc)
 
-                    local style = string.lower(tostring(o.Style or "accent"))
                     local bg, bgHover, textCol, strokeCol, strokeT
                     if style == "ghost" then
-                        bg = Color3.fromRGB(26, 22, 34)
-                        bgHover = Color3.fromRGB(36, 30, 48)
+                        bg = Color3.fromRGB(24, 20, 32)
+                        bgHover = Color3.fromRGB(34, 28, 46)
                         textCol = T.Text
                         strokeCol = Color3.fromRGB(52, 48, 64)
-                        strokeT = 0.45
+                        strokeT = 0.5
                     elseif style == "soft" then
-                        bg = Color3.fromRGB(40, 28, 62)
-                        bgHover = Color3.fromRGB(52, 36, 82)
+                        bg = Color3.fromRGB(36, 28, 54)
+                        bgHover = Color3.fromRGB(48, 36, 72)
                         textCol = Color3.fromRGB(236, 228, 255)
-                        strokeCol = Color3.fromRGB(72, 52, 110)
-                        strokeT = 0.55
+                        strokeCol = Color3.fromRGB(70, 52, 100)
+                        strokeT = 0.6
                     else
                         bg = accent
                         bgHover = T.AccentDim
@@ -2343,7 +2380,7 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.fromScale(1, 1),
                         Parent = row,
                     })
-                    corner(b, 12)
+                    corner(b, 11)
                     if strokeCol then
                         stroke(b, strokeCol, 1, strokeT)
                     end
@@ -2352,25 +2389,23 @@ function VoidUI:CreateWindow(cfg)
                         BackgroundTransparency = 1,
                         AnchorPoint = Vector2.new(0.5, 0.5),
                         Position = UDim2.fromScale(0.5, 0.5),
-                        Size = UDim2.new(1, -20, 1, -8),
+                        Size = UDim2.new(1, -18, 1, -6),
                         Parent = b,
                     })
-                    list(inner, Enum.FillDirection.Horizontal, 10, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
+                    list(inner, Enum.FillDirection.Horizontal, 8, Enum.HorizontalAlignment.Center, Enum.VerticalAlignment.Center)
 
-                    if o.Icon then
-                        local ih = makeIcon(inner, o.Icon, 16, textCol, 2)
-                        ih.Size = UDim2.fromOffset(16, 16)
-                        ih.LayoutOrder = 1
-                    end
+                    local ih = makeIcon(inner, iconName, 15, textCol, 2)
+                    ih.Size = UDim2.fromOffset(15, 15)
+                    ih.LayoutOrder = 1
 
-                    local textColFrame = mk("Frame", {
+                    local labels = mk("Frame", {
                         BackgroundTransparency = 1,
                         Size = UDim2.fromOffset(0, 0),
                         AutomaticSize = Enum.AutomaticSize.XY,
                         LayoutOrder = 2,
                         Parent = inner,
                     })
-                    list(textColFrame, Enum.FillDirection.Vertical, 1, Enum.HorizontalAlignment.Center)
+                    list(labels, Enum.FillDirection.Vertical, 1, Enum.HorizontalAlignment.Left)
 
                     mk("TextLabel", {
                         BackgroundTransparency = 1,
@@ -2380,7 +2415,7 @@ function VoidUI:CreateWindow(cfg)
                         Text = o.Title or "Button",
                         Size = UDim2.fromOffset(0, 16),
                         AutomaticSize = Enum.AutomaticSize.X,
-                        Parent = textColFrame,
+                        Parent = labels,
                     })
                     if o.Desc and o.Desc ~= "" then
                         mk("TextLabel", {
@@ -2388,11 +2423,11 @@ function VoidUI:CreateWindow(cfg)
                             Font = Fonts.Desc,
                             TextSize = 11,
                             TextColor3 = style == "accent" and Color3.fromRGB(230, 220, 255) or T.TextMute,
-                            TextTransparency = style == "accent" and 0.25 or 0,
+                            TextTransparency = style == "accent" and 0.28 or 0,
                             Text = o.Desc,
                             Size = UDim2.fromOffset(0, 14),
                             AutomaticSize = Enum.AutomaticSize.X,
-                            Parent = textColFrame,
+                            Parent = labels,
                         })
                     end
 

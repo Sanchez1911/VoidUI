@@ -340,7 +340,6 @@ Window:Tab({ Title = "Inventory", Icon = "lucide:backpack" })
     :Button({
         Title = "Notify test",
         Icon = "lucide:bell",
-        Style = "Soft",
         Desc = "Fire a sample notification",
         Callback = function()
             VoidUI:Notify({ Title = "VoidUI", Content = "Library ready", Duration = 3 })
@@ -383,7 +382,6 @@ do
     cfg:Button({
         Title = "Save config",
         Icon = "lucide:save",
-        Style = "Accent",
         Desc = "Write flags to demo.json",
         Callback = function()
             Window:SaveConfig("demo")
@@ -393,7 +391,6 @@ do
     cfg:Button({
         Title = "Load config",
         Icon = "lucide:folder-open",
-        Style = "Soft",
         Desc = "Restore the last saved flags",
         Callback = function()
             if Window:LoadConfig("demo") then
@@ -406,7 +403,6 @@ do
     cfg:Button({
         Title = "Reset UI",
         Icon = "lucide:rotate-ccw",
-        Style = "Ghost",
         Desc = "Clear search & show hub",
         Callback = function()
             Window:Search("")
