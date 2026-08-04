@@ -15,7 +15,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.7.7",
+    Version = "1.7.8",
     _windows = {},
 }
 
@@ -2932,6 +2932,7 @@ function VoidUI:CreateWindow(cfg)
 
                     local ROW_H = math.clamp(math.floor(tonumber(o.RowHeight) or 40), 32, 56)
                     local ROW_GAP = 4
+                    local showItemIcons = o.ShowItemIcons ~= false -- default on; AE Auto Join sets false
 
                     addDivider()
                     rowOrder = rowOrder + 1
@@ -3245,29 +3246,31 @@ function VoidUI:CreateWindow(cfg)
                                 Parent = r,
                             })
 
-                            local grip = makeIcon(r, "lucide:grip-vertical", 16, T.TextMute, 2)
+                            local grip = makeIcon(r, "lucide:grip-vertical", 14, T.TextMute, 2)
                             grip.AnchorPoint = Vector2.new(0, 0.5)
-                            grip.Position = UDim2.new(0, 10, 0.5, 0)
+                            grip.Position = UDim2.new(0, 8, 0.5, 0)
 
-                            local left = 30
-                            local asset = entryAsset(v) or normalizeAsset(type(v) == "table" and (v.Image or v.Icon))
-                            if asset then
-                                local ic = makeIcon(r, asset, 18, Color3.fromRGB(230, 226, 240), 2)
-                                ic.AnchorPoint = Vector2.new(0, 0.5)
-                                ic.Position = UDim2.new(0, 28, 0.5, 0)
-                                left = 52
+                            local left = 28
+                            if showItemIcons then
+                                local asset = entryAsset(v) or normalizeAsset(type(v) == "table" and (v.Image or v.Icon))
+                                if asset then
+                                    local ic = makeIcon(r, asset, 16, Color3.fromRGB(230, 226, 240), 2)
+                                    ic.AnchorPoint = Vector2.new(0, 0.5)
+                                    ic.Position = UDim2.new(0, 26, 0.5, 0)
+                                    left = 48
+                                end
                             end
 
                             mk("TextLabel", {
                                 Name = "Num",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Title,
-                                TextSize = 13,
+                                TextSize = 12,
                                 TextColor3 = accent,
                                 Text = "#" .. i,
                                 AnchorPoint = Vector2.new(0, 0.5),
                                 Position = UDim2.new(0, left, 0.5, 0),
-                                Size = UDim2.fromOffset(30, 18),
+                                Size = UDim2.fromOffset(28, 16),
                                 ZIndex = 2,
                                 Parent = r,
                             })
@@ -3275,14 +3278,14 @@ function VoidUI:CreateWindow(cfg)
                                 Name = "Label",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Body,
-                                TextSize = 14,
+                                TextSize = 13,
                                 TextColor3 = T.Text,
                                 TextXAlignment = Enum.TextXAlignment.Left,
                                 TextTruncate = Enum.TextTruncate.AtEnd,
                                 Text = entryLabel(v),
                                 AnchorPoint = Vector2.new(0, 0.5),
-                                Position = UDim2.new(0, left + 30, 0.5, 0),
-                                Size = UDim2.new(1, -(left + 42), 0, 20),
+                                Position = UDim2.new(0, left + 28, 0.5, 0),
+                                Size = UDim2.new(1, -(left + 38), 0, 18),
                                 ZIndex = 2,
                                 Parent = r,
                             })
@@ -3359,23 +3362,21 @@ function VoidUI:CreateWindow(cfg)
 
                     buildRows()
 
-                    -- Bottom grip — drag to resize visible height (PriorityList only when scroll)
+                    -- Bottom grip — thin hit area (PriorityList resize)
                     if resizable and scroll then
                         local grip = mk("TextButton", {
-                            BackgroundColor3 = Color3.fromRGB(28, 24, 38),
-                            BackgroundTransparency = 0.35,
+                            BackgroundTransparency = 1,
                             AutoButtonColor = false,
                             Text = "",
-                            Size = UDim2.new(1, 0, 0, 12),
+                            Size = UDim2.new(1, 0, 0, 10),
                             Parent = wrap,
                         })
-                        corner(grip, 6)
                         mk("Frame", {
                             BackgroundColor3 = accent,
-                            BackgroundTransparency = 0.45,
+                            BackgroundTransparency = 0.55,
                             AnchorPoint = Vector2.new(0.5, 0.5),
                             Position = UDim2.fromScale(0.5, 0.5),
-                            Size = UDim2.fromOffset(36, 3),
+                            Size = UDim2.fromOffset(28, 2),
                             BorderSizePixel = 0,
                             Parent = grip,
                         })

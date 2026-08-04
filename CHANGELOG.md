@@ -1,5 +1,18 @@
 # VoidUI Changelog
 
+## 1.7.8 — PriorityList light + ShowItemIcons
+
+### PriorityList
+- `ShowItemIcons = false` — ซ่อน icon ต่อแถว (เหลือ grip + #N + ชื่อ) ลดความรก
+- Resize grip บางลง (เส้นม่วง 2px · ไม่มีแท่งหนา)
+- แถว default ยัง 40 · AE ใช้ 36 ได้
+
+### AE Auto Join (companion)
+- Status สั้น 2 บรรทัด · ย้ายไปคอลัมน์ Modes
+- Queue Next = Accent CTA · Cancel = Soft
+
+---
+
 ## 1.7.7 — Button affordance always on
 
 ### Button

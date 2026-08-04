@@ -175,10 +175,11 @@ local prio = S:PriorityList({
     { Name = "Quest", Image = "rbxassetid://123" },
   },
   RowHeight = 40,
+  ShowItemIcons = true, -- false = เหลือ grip + #N + ชื่อ (clean)
   MaxVisible = 5,       -- scroll ถ้ายาวเกิน
   MinHeight = 120,
   MaxHeight = 360,
-  Resizable = true,     -- ลากแถบล่างปรับสูง
+  Resizable = true,     -- ลากเส้นบางล่างปรับสูง
   Flag = "farmPrio",
   Callback = function(list) end,
   OnResize = function(h) end,
@@ -186,7 +187,7 @@ local prio = S:PriorityList({
 -- prio:Get() / prio:Set(newList, silent?) / prio:SetHeight(h) / prio:GetHeight()
 ```
 
-UX: กดค้างแล้วลาก — ghost ตามเมาส์ · viewport เลื่อนได้ · แถบม่วงล่าง = resize
+UX: กดค้างแล้วลาก — ghost ตามเมาส์ · viewport เลื่อนได้ · เส้นม่วงบางล่าง = resize
 
 ---
 
