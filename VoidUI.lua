@@ -15,7 +15,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.7.8",
+    Version = "1.7.9",
     _windows = {},
 }
 
@@ -2186,9 +2186,10 @@ function VoidUI:CreateWindow(cfg)
                         local asset = (not multi) and entryAsset(current) or nil
                         local leftPad = 14
                         if asset then
-                            previewIcon = makeIcon(box, asset, 16, Color3.new(1, 1, 1), 3)
-                            previewIcon.Position = UDim2.fromOffset(10, 7)
-                            leftPad = 32
+                            previewIcon = makeIcon(box, asset, 20, Color3.new(1, 1, 1), 3)
+                            previewIcon.AnchorPoint = Vector2.new(0, 0.5)
+                            previewIcon.Position = UDim2.new(0, 8, 0.5, 0)
+                            leftPad = 36
                         end
                         txt.Position = UDim2.fromOffset(leftPad, 0)
                         txt.Size = UDim2.new(1, -(leftPad + 22), 1, 0)
@@ -2247,15 +2248,17 @@ function VoidUI:CreateWindow(cfg)
 
                         local abs = box.AbsolutePosition
                         local boxSz = box.AbsoluteSize
-                        local itemH = 34
-                        local gap = 2
+                        -- Taller rows so game asset icons (Shop/Craft) are readable
+                        local itemH = 44
+                        local iconSz = 28
+                        local gap = 3
                         local padTop, padBot = 6, 8
                         local searchH = 0
                         local wantFilter = (o.Search ~= false) and (#values >= 6 or o.Search == true)
                         if wantFilter then searchH = 34 end
 
-                        local maxListH = math.floor((workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 720) * 0.38)
-                        maxListH = math.clamp(maxListH, 160, 280)
+                        local maxListH = math.floor((workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 720) * 0.42)
+                        maxListH = math.clamp(maxListH, 180, 320)
                         local fullListH = #values * itemH + math.max(0, #values - 1) * gap
                         local listH = math.min(fullListH, maxListH)
                         local menuW = math.max(boxSz.X, 200)
@@ -2391,15 +2394,16 @@ function VoidUI:CreateWindow(cfg)
                                 local textLeft = 14
                                 local asset = entryAsset(v)
                                 if asset then
-                                    local ic = makeIcon(item, asset, 18, Color3.new(1, 1, 1), 505)
-                                    ic.Position = UDim2.fromOffset(12, 8)
-                                    textLeft = 36
+                                    local ic = makeIcon(item, asset, iconSz, Color3.new(1, 1, 1), 505)
+                                    ic.AnchorPoint = Vector2.new(0, 0.5)
+                                    ic.Position = UDim2.new(0, 10, 0.5, 0)
+                                    textLeft = 10 + iconSz + 10
                                 end
 
                                 mk("TextLabel", {
                                     BackgroundTransparency = 1,
                                     Font = selected and Fonts.Title or Fonts.Body,
-                                    TextSize = 12,
+                                    TextSize = 13,
                                     TextColor3 = selected and Color3.fromRGB(236, 228, 255) or T.Text,
                                     TextXAlignment = Enum.TextXAlignment.Left,
                                     TextTruncate = Enum.TextTruncate.AtEnd,

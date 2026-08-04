@@ -1,5 +1,14 @@
 # VoidUI Changelog
 
+## 1.7.9 — Bigger dropdown asset icons
+
+### Dropdown menu
+- แถวสูง **44** · ไอคอนเกม **28px** (เดิม ~18 ในแถว 34)
+- จัดกลางแนวตั้ง · ข้อความ 13px
+- เมนูสูงสุดกว้างขึ้นเล็กน้อย · preview บน chip 20px
+
+---
+
 ## 1.7.8 — PriorityList light + ShowItemIcons
 
 ### PriorityList
