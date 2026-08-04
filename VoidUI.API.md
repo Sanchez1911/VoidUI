@@ -131,10 +131,10 @@ S:Dropdown({
 
 ### Button
 ```lua
--- Clean row (default): ทั้งแถวคลิกได้ · Icon ขวาเป็น optional (ไม่ default play)
+-- Clean row: ทั้งแถวคลิกได้ · ไอคอนขวาเสมอ (default chevron-right ถ้าไม่ใส่)
 S:Button({
   Title = "Skip Wave",
-  Icon = "lucide:skip-forward",  -- ใส่เองต่อ action — ไม่งั้นไม่มีไอคอน
+  Icon = "lucide:skip-forward",  -- แนะนำใส่ต่อ action
   Callback = function() end,
 })
 -- Style = "Accent" | "Soft" | "Ghost" → ปุ่มเต็มแถว

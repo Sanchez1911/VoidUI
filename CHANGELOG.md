@@ -1,10 +1,17 @@
 # VoidUI Changelog
 
+## 1.7.7 — Button affordance always on
+
+### Button
+- ทุกปุ่มมีไอคอนขวาเสมอ — ใส่ `Icon`/`Image` เอง หรือ default **`lucide:chevron-right`**
+- ไม่กลับไป default `play` (ทำให้ทุกปุ่มเหมือนกัน)
+
+---
+
 ## 1.7.6 — Clean actions + PriorityList resize
 
 ### Button
-- **ไม่ default `lucide:play` อีก** — ใส่ `Icon`/`Image` เองเท่านั้น (ไม่งั้นไม่มีไอคอนขวา)
-- กันปุ่มทุกแถวหน้าตาเหมือนกัน
+- ไม่ default `lucide:play` — ใส่ `Icon` เอง (1.7.7 คืน affordance เป็น chevron)
 
 ### PriorityList
 - Default `RowHeight = 40` (แน่นพอดี)

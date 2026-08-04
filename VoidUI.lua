@@ -15,7 +15,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.7.6",
+    Version = "1.7.7",
     _windows = {},
 }
 
@@ -2532,22 +2532,17 @@ function VoidUI:CreateWindow(cfg)
                 function Section:Button(o)
                     o = o or {}
                     local style = string.lower(tostring(o.Style or "clean"))
-                    -- Icon optional — never default to play (was making every action look identical)
-                    local iconName = normalizeAsset(o.Icon or o.Image)
+                    -- Always show a trailing icon so rows read as clickable.
+                    -- Prefer explicit Icon/Image; else chevron (not play — that made every button identical).
+                    local iconName = normalizeAsset(o.Icon or o.Image) or "lucide:chevron-right"
 
                     -- Clean row — whole row is clickable (not just the icon)
                     if style == "clean" or style == "row" or style == "icon" then
                         local row, _, right = makeRow(o.Title or "Button", o.Desc, o.LeadingIcon or o.LeadingImage)
-                        local img = nil
-                        if iconName then
-                            right.Size = UDim2.fromOffset(34, 34)
-                            local ih, ic = makeIcon(right, iconName, 18, T.TextDim, 2)
-                            ih.AnchorPoint = Vector2.new(0.5, 0.5)
-                            ih.Position = UDim2.fromScale(0.5, 0.5)
-                            img = ic
-                        else
-                            right.Size = UDim2.fromOffset(0, 0)
-                        end
+                        right.Size = UDim2.fromOffset(34, 34)
+                        local ih, img = makeIcon(right, iconName, 18, T.TextDim, 2)
+                        ih.AnchorPoint = Vector2.new(0.5, 0.5)
+                        ih.Position = UDim2.fromScale(0.5, 0.5)
 
                         local hitBg = row:FindFirstChildWhichIsA("Frame") -- first child is hover bg from makeRow
                         local hit = mk("TextButton", {
