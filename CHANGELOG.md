@@ -1,5 +1,24 @@
 # VoidUI Changelog
 
+## 1.7.12 — Flexible Section headers (sane default)
+
+### Section header sizing
+- **Default กลับมาพอดี:** Title **14** · Icon **15** (1.7.11's 16/20 ใหญ่เกิน · lucide เบลอ)
+- ปรับได้ทั้งหน้าต่าง / ทีละ Section:
+
+```lua
+CreateWindow({
+  SectionHeader = { TitleSize = 14, IconSize = 15, Scale = 1 },
+  -- หรือ: SectionTitleSize, SectionIconSize, SectionHeaderScale
+})
+Page:Section({ Title = "...", Icon = "...", TitleSize = 15, IconSize = 18, HeaderScale = 1.1 })
+```
+
+- ยังเก็บ: `rbxassetid` สีเต็ม · lucide tint accent · จัดกลางแนวตั้ง
+- `W.SectionHeader` อ่านค่าที่ใช้จริงได้
+
+---
+
 ## 1.7.11 — Clearer Section headers
 
 ### Section
@@ -7,6 +26,7 @@
 - ไอคอนหัวข้อ **20px** · จัดกลางแนวตั้ง
 - `rbxassetid` ไม่ถูก tint ม่วง (เห็นสีเกมจริง) · lucide ยัง accent
 - เส้นใต้หัวข้อยาวขึ้นเล็กน้อย
+- ⚠️ ใหญ่เกิน → ใช้ 1.7.12 + `SectionHeader` แทน
 
 ---
 

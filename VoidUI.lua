@@ -6,7 +6,8 @@
 
     API sketch:
       local W = VoidUI:CreateWindow({ Title=..., Icon=..., Accent=..., Search=true, OpenButton=true })
-      Page:Section({ Title=..., Icon="rbxassetid://..." })
+      Page:Section({ Title=..., Icon="rbxassetid://...", TitleSize=, IconSize=, HeaderScale= })
+      CreateWindow({ SectionHeader={ TitleSize=14, IconSize=15, Scale=1 } })  -- defaults; override per game
       S:Toggle / Slider / Dropdown / Button / Input / Keybind  — Icon/Image optional (prefer Section headers)
       S:PriorityList({ Values=..., MaxVisible=, RowHeight=, Resizable=true, Callback=fn })
       W:Popup({ Title=..., Size=..., Icon=... })
@@ -15,7 +16,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.7.11",
+    Version = "1.7.12",
     _windows = {},
 }
 
@@ -582,6 +583,13 @@ function VoidUI:CreateWindow(cfg)
     local wantSearch = cfg.Search ~= false
     local cornerR = cfg.CornerRadius or 26
 
+    -- Section header sizing (window default → per-Section override)
+    -- Compact by default — 1.7.11's 16/20 was too loud for lucide icons.
+    local secHdrCfg = type(cfg.SectionHeader) == "table" and cfg.SectionHeader or {}
+    local winSecTitleSize = math.clamp(tonumber(cfg.SectionTitleSize or secHdrCfg.TitleSize) or 14, 11, 22)
+    local winSecIconSize = math.clamp(tonumber(cfg.SectionIconSize or secHdrCfg.IconSize) or 15, 12, 28)
+    local winSecHdrScale = math.clamp(tonumber(cfg.SectionHeaderScale or secHdrCfg.Scale) or 1, 0.75, 1.75)
+
     -- deep copy theme overrides
     local T = {}
     for k, v in pairs(Theme) do T[k] = v end
@@ -965,6 +973,11 @@ function VoidUI:CreateWindow(cfg)
         Main = main,
         Theme = T,
         Accent = accent,
+        SectionHeader = {
+            TitleSize = winSecTitleSize,
+            IconSize = winSecIconSize,
+            Scale = winSecHdrScale,
+        },
         _tabs = {},
         _activeTab = nil,
         _flags = {},
@@ -1672,10 +1685,22 @@ function VoidUI:CreateWindow(cfg)
                 })
                 list(wrap, Enum.FillDirection.Vertical, 8)
 
-                -- Section header — larger + clearer (was 14px / icon 14 → hard to scan)
+                -- Section header size: Section opts > Window SectionHeader > defaults (14 / 15)
+                local hdrScale = math.clamp(tonumber(sopts.HeaderScale or sopts.Scale) or winSecHdrScale, 0.75, 1.75)
+                local titleSize = math.clamp(
+                    math.floor((tonumber(sopts.TitleSize) or winSecTitleSize) * hdrScale + 0.5),
+                    11, 22
+                )
+                local iconSize = math.clamp(
+                    math.floor((tonumber(sopts.IconSize) or winSecIconSize) * hdrScale + 0.5),
+                    12, 28
+                )
+                local labelH = titleSize + 4
+                local headH = math.max(labelH + 2, iconSize + 6, 20)
+
                 local headRow = mk("Frame", {
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 26),
+                    Size = UDim2.new(1, 0, 0, headH),
                     Parent = wrap,
                 })
                 local titleX = 0
@@ -1683,33 +1708,33 @@ function VoidUI:CreateWindow(cfg)
                     -- Game rbxassetid keep full color; lucide tint accent
                     local iconCol = (type(secIcon) == "string" and secIcon:find("rbxassetid", 1, true))
                         and Color3.new(1, 1, 1) or accent
-                    local ih = makeIcon(headRow, secIcon, 20, iconCol, 2)
+                    local ih = makeIcon(headRow, secIcon, iconSize, iconCol, 2)
                     ih.AnchorPoint = Vector2.new(0, 0.5)
                     ih.Position = UDim2.new(0, 0, 0.5, 0)
-                    titleX = 28
+                    titleX = iconSize + 8
                 end
                 bloomLabel({
                     Parent = headRow,
                     Name = "SectionTitle",
                     Text = string.upper(secTitle),
-                    TextSize = 16,
+                    TextSize = titleSize,
                     Font = Fonts.Title,
-                    Color = Color3.fromRGB(245, 240, 255),
+                    Color = Color3.fromRGB(240, 234, 255),
                     Accent = accent,
                     Bloom = bloomOn,
-                    Height = 22,
-                    Position = UDim2.fromOffset(titleX, 2),
-                    Size = UDim2.new(1, -titleX, 0, 22),
+                    Height = labelH,
+                    Position = UDim2.fromOffset(titleX, math.floor((headH - labelH) / 2)),
+                    Size = UDim2.new(1, -titleX, 0, labelH),
                 })
                 -- accent tick under header when bloom on
                 if bloomOn then
                     local tick = mk("Frame", {
                         BackgroundColor3 = accent,
-                        BackgroundTransparency = 0.3,
+                        BackgroundTransparency = 0.35,
                         BorderSizePixel = 0,
                         AnchorPoint = Vector2.new(0, 1),
                         Position = UDim2.new(0, titleX, 1, 0),
-                        Size = UDim2.fromOffset(28, 2),
+                        Size = UDim2.fromOffset(math.max(18, iconSize + 4), 2),
                         Parent = headRow,
                     })
                     corner(tick, 1)

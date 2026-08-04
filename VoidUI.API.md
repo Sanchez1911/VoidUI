@@ -73,6 +73,9 @@ local W = VoidUI:CreateWindow({
   CornerRadius = 26,
   ToggleKey = Enum.KeyCode.G,
   Folder = "MyHub",               -- โฟลเดอร์ config
+  -- Section header sizing (defaults: Title 14 · Icon 15 · Scale 1)
+  SectionHeader = { TitleSize = 14, IconSize = 15, Scale = 1 },
+  -- หรือแบบแบน: SectionTitleSize / SectionIconSize / SectionHeaderScale
 })
 ```
 
@@ -91,10 +94,16 @@ local W = VoidUI:CreateWindow({
 ```lua
 local Tab = W:Tab({ Title = "Home", Icon = "lucide:house", Selected = true })
 local Page = Tab:Page({ Title = "Home", Columns = 2 })  -- 1 หรือ 2 คอลัมน์
-local S = Page:Section({ Title = "TRAINING", Column = 1, Icon = "lucide:dumbbell" })
+local S = Page:Section({
+  Title = "TRAINING", Column = 1, Icon = "lucide:dumbbell",
+  -- optional per-section override (wins over Window.SectionHeader):
+  -- TitleSize = 14, IconSize = 16, HeaderScale = 1.1,
+})
 
 -- สั้น: Tab:Section(...) สร้าง Page ให้อัตโนมัติ
 ```
+
+หัวข้อ Section: **default 14 / 15** (ไม่บวม) · เกมอื่นอยากใหญ่ขึ้นตั้งที่ `CreateWindow` หรือทีละ Section · `rbxassetid` ไม่ถูก tint accent
 
 ---
 
