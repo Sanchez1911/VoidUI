@@ -1,5 +1,14 @@
 # VoidUI Changelog
 
+## 1.7.10 — Dropdown text size locked
+
+### Fix
+- แถวที่เลือกเคยใช้ `Fonts.Title` → ตัวหนังสือดูโตตามไอคอนเกม
+- ตอนนี้ข้อความ **Body 13px คงที่** · เลือกแล้วเปลี่ยนแค่สี + ติ๊ก
+- ไอคอนอยู่ในช่องคงที่ `28×28` + clip (ไม่ดันเลย์เอาต์)
+
+---
+
 ## 1.7.9 — Bigger dropdown asset icons
 
 ### Dropdown menu

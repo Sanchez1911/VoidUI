@@ -15,7 +15,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.7.9",
+    Version = "1.7.10",
     _windows = {},
 }
 
@@ -2391,21 +2391,37 @@ function VoidUI:CreateWindow(cfg)
                                 })
                                 corner(mark, 1)
 
+                                -- Fixed icon slot + fixed body font (never Title — looked like text scaled with asset)
                                 local textLeft = 14
                                 local asset = entryAsset(v)
                                 if asset then
-                                    local ic = makeIcon(item, asset, iconSz, Color3.new(1, 1, 1), 505)
-                                    ic.AnchorPoint = Vector2.new(0, 0.5)
-                                    ic.Position = UDim2.new(0, 10, 0.5, 0)
+                                    local slot = mk("Frame", {
+                                        BackgroundColor3 = Color3.fromRGB(20, 18, 28),
+                                        BackgroundTransparency = 0.35,
+                                        Size = UDim2.fromOffset(iconSz, iconSz),
+                                        AnchorPoint = Vector2.new(0, 0.5),
+                                        Position = UDim2.new(0, 10, 0.5, 0),
+                                        ClipsDescendants = true,
+                                        ZIndex = 505,
+                                        Parent = item,
+                                    })
+                                    corner(slot, 7)
+                                    local ic = makeIcon(slot, asset, iconSz - 4, Color3.new(1, 1, 1), 506)
+                                    ic.AnchorPoint = Vector2.new(0.5, 0.5)
+                                    ic.Position = UDim2.fromScale(0.5, 0.5)
+                                    -- keep full-color game assets; don't let layout expand
+                                    ic.Size = UDim2.fromOffset(iconSz - 4, iconSz - 4)
                                     textLeft = 10 + iconSz + 10
                                 end
 
                                 mk("TextLabel", {
                                     BackgroundTransparency = 1,
-                                    Font = selected and Fonts.Title or Fonts.Body,
+                                    Font = Fonts.Body,
                                     TextSize = 13,
+                                    TextScaled = false,
                                     TextColor3 = selected and Color3.fromRGB(236, 228, 255) or T.Text,
                                     TextXAlignment = Enum.TextXAlignment.Left,
+                                    TextYAlignment = Enum.TextYAlignment.Center,
                                     TextTruncate = Enum.TextTruncate.AtEnd,
                                     Text = entryLabel(v),
                                     Size = UDim2.new(1, -(textLeft + 28), 1, 0),
