@@ -435,7 +435,7 @@ do
 end
 
 do
-    local demo = Settings:Section({ Title = "NEW · v1.7.3", Icon = "lucide:sparkles" })
+    local demo = Settings:Section({ Title = "NEW · v1.7.4", Icon = "lucide:sparkles" })
     demo:Paragraph({
         Title = "What's new",
         Icon = "lucide:info",
