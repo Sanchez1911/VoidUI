@@ -15,7 +15,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.7.2",
+    Version = "1.7.3",
     _windows = {},
 }
 
@@ -1712,14 +1712,14 @@ function VoidUI:CreateWindow(cfg)
 
                 local card = mk("Frame", {
                     BackgroundColor3 = T.BgSection,
-                    BackgroundTransparency = math.clamp(0.1 + glass * 0.4, 0.08, 0.42),
+                    BackgroundTransparency = math.clamp(0.12 + glass * 0.35, 0.1, 0.4),
                     Size = UDim2.new(1, 0, 0, 0),
                     AutomaticSize = Enum.AutomaticSize.Y,
                     Parent = wrap,
                 })
-                corner(card, 16)
-                stroke(card, Color3.fromRGB(36, 34, 44), 1, 0.72)
-                pad(card, 1, 2, 1, 2)
+                corner(card, 12)
+                stroke(card, Color3.fromRGB(34, 32, 42), 1, 0.78)
+                pad(card, 0, 1, 0, 1)
                 list(card, Enum.FillDirection.Vertical, 0)
 
                 local Section = { Frame = card, Title = secTitle }
@@ -1780,7 +1780,7 @@ function VoidUI:CreateWindow(cfg)
                         Parent = card,
                     })
                     row:SetAttribute("_bt", 1)
-                    pad(row, 6, 6, 6, 8)
+                    pad(row, 5, 6, 5, 7)
 
                     -- subtle hover highlight over the whole row
                     local hitBg = mk("Frame", {
@@ -1790,7 +1790,7 @@ function VoidUI:CreateWindow(cfg)
                         ZIndex = 0,
                         Parent = row,
                     })
-                    corner(hitBg, 10)
+                    corner(hitBg, 8)
                     row.MouseEnter:Connect(function()
                         tween(hitBg, TI(0.12), { BackgroundTransparency = 0.78 })
                     end)
@@ -2929,8 +2929,8 @@ function VoidUI:CreateWindow(cfg)
                         items[i] = v
                     end
 
-                    local ROW_H = 42
-                    local ROW_GAP = 5
+                    local ROW_H = 40
+                    local ROW_GAP = 4
 
                     addDivider()
                     rowOrder = rowOrder + 1
@@ -2941,8 +2941,8 @@ function VoidUI:CreateWindow(cfg)
                         LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    pad(wrap, 8, 8, 10, 10)
-                    list(wrap, Enum.FillDirection.Vertical, 6)
+                    pad(wrap, 6, 8, 8, 8)
+                    list(wrap, Enum.FillDirection.Vertical, 5)
                     registerSearch(wrap, o.Title or "Priority", o.Desc)
 
                     if o.Title then
@@ -3011,18 +3011,18 @@ function VoidUI:CreateWindow(cfg)
                         local num = r:FindFirstChild("Num")
                         if num then num.Text = "#" .. tostring(i) end
                         if lit then
-                            r.BackgroundColor3 = Color3.fromRGB(46, 34, 72)
+                            r.BackgroundColor3 = Color3.fromRGB(32, 26, 46)
                             local st = r:FindFirstChildOfClass("UIStroke")
                             if st then
                                 st.Color = accent
-                                st.Transparency = 0.25
+                                st.Transparency = 0.4
                             end
                         else
-                            r.BackgroundColor3 = Color3.fromRGB(26, 22, 36)
+                            r.BackgroundColor3 = Color3.fromRGB(22, 20, 30)
                             local st = r:FindFirstChildOfClass("UIStroke")
                             if st then
-                                st.Color = Color3.fromRGB(48, 46, 58)
-                                st.Transparency = 0.55
+                                st.Color = Color3.fromRGB(40, 38, 50)
+                                st.Transparency = 0.65
                             end
                         end
                     end
@@ -3043,12 +3043,34 @@ function VoidUI:CreateWindow(cfg)
                         syncOrders(to)
                     end
 
-                    local function indexAtY(absY)
-                        for i, r in ipairs(rowFrames) do
-                            local mid = r.AbsolutePosition.Y + r.AbsoluteSize.Y * 0.5
-                            if absY < mid then return i end
+                    -- probe = จุดกลาง ghost (สิ่งที่ตาเห็น) ไม่ใช่แค่เมาส์
+                    -- threshold ตามทิศ: ขึ้น/ลง swap ไว ไม่ต้องลากพ้น midpoint
+                    local function probeY(mouseY)
+                        if drag.ghost and drag.ghost.Parent then
+                            return drag.ghost.AbsolutePosition.Y + drag.ghost.AbsoluteSize.Y * 0.5
                         end
-                        return #rowFrames
+                        return mouseY
+                    end
+
+                    local function nextTarget(py)
+                        local i = drag.idx
+                        if i > 1 then
+                            local above = rowFrames[i - 1]
+                            -- ลากขึ้น: แค่กลาง ghost โผล่เข้า ~78% ของแถวบน → สลับเลย
+                            local thresh = above.AbsolutePosition.Y + above.AbsoluteSize.Y * 0.78
+                            if py < thresh then
+                                return i - 1
+                            end
+                        end
+                        if i < #rowFrames then
+                            local below = rowFrames[i + 1]
+                            -- ลากลง: กลาง ghost แตะ ~22% ของแถวล่าง → สลับ
+                            local thresh = below.AbsolutePosition.Y + below.AbsoluteSize.Y * 0.22
+                            if py > thresh then
+                                return i + 1
+                            end
+                        end
+                        return i
                     end
 
                     local function clearGhost()
@@ -3086,8 +3108,8 @@ function VoidUI:CreateWindow(cfg)
                         local ghostParent = sg or listFrame
                         local g = src:Clone()
                         g.Name = "VoidDragGhost"
-                        g.BackgroundTransparency = 0.05
-                        g.BackgroundColor3 = Color3.fromRGB(40, 30, 58)
+                        g.BackgroundTransparency = 0.08
+                        g.BackgroundColor3 = Color3.fromRGB(28, 24, 40)
                         g.Size = UDim2.fromOffset(src.AbsoluteSize.X, src.AbsoluteSize.Y)
                         g.AnchorPoint = Vector2.new(0, 0)
                         g.Parent = ghostParent
@@ -3100,8 +3122,8 @@ function VoidUI:CreateWindow(cfg)
                         local gst = g:FindFirstChildOfClass("UIStroke")
                         if gst then
                             gst.Color = accent
-                            gst.Transparency = 0.2
-                            gst.Thickness = 1.25
+                            gst.Transparency = 0.35
+                            gst.Thickness = 1
                         end
                         local gsc = g:FindFirstChild("DragScale")
                         if gsc then gsc:Destroy() end
@@ -3132,14 +3154,14 @@ function VoidUI:CreateWindow(cfg)
 
                     local function onDragMove(input)
                         if not drag.active then return end
-                        -- GetMouseLocation นิ่งกว่า Input.Position บนบาง executor
                         local pos = input.Position
                         if input.UserInputType == Enum.UserInputType.MouseMovement then
                             local m = UserInputService:GetMouseLocation()
                             pos = Vector3.new(m.X, m.Y, 0)
                         end
                         if drag._setGhostPos then drag._setGhostPos(pos) end
-                        local target = indexAtY(pos.Y)
+                        -- หลังวาง ghost แล้วค่อยวัด — ใช้กลาง ghost + threshold ไว
+                        local target = nextTarget(probeY(pos.Y))
                         if target ~= drag.idx then
                             moveItem(drag.idx, target)
                             drag.idx = target
@@ -3156,52 +3178,51 @@ function VoidUI:CreateWindow(cfg)
 
                         for i, v in ipairs(items) do
                             local r = mk("TextButton", {
-                                BackgroundColor3 = Color3.fromRGB(26, 22, 36),
+                                BackgroundColor3 = Color3.fromRGB(22, 20, 30),
                                 AutoButtonColor = false,
                                 Text = "",
                                 Size = UDim2.new(1, 0, 0, ROW_H),
                                 LayoutOrder = i,
                                 Parent = listFrame,
                             })
-                            corner(r, 10)
-                            stroke(r, Color3.fromRGB(44, 42, 54), 1, 0.5)
+                            corner(r, 8)
+                            stroke(r, Color3.fromRGB(40, 38, 50), 1, 0.65)
                             rowFrames[i] = r
 
-                            -- left accent chip
-                            local chip = mk("Frame", {
+                            -- thin left tick
+                            mk("Frame", {
                                 BackgroundColor3 = accent,
-                                BackgroundTransparency = 0.82,
-                                Size = UDim2.fromOffset(3, ROW_H - 14),
-                                Position = UDim2.fromOffset(0, 7),
+                                BackgroundTransparency = 0.55,
+                                Size = UDim2.new(0, 2, 1, -12),
+                                Position = UDim2.fromOffset(0, 6),
                                 BorderSizePixel = 0,
                                 ZIndex = 2,
                                 Parent = r,
                             })
-                            corner(chip, 2)
 
-                            local grip = makeIcon(r, "lucide:grip-vertical", 15, T.TextMute, 2)
+                            local grip = makeIcon(r, "lucide:grip-vertical", 14, T.TextMute, 2)
                             grip.AnchorPoint = Vector2.new(0, 0.5)
                             grip.Position = UDim2.new(0, 10, 0.5, 0)
 
-                            local left = 32
+                            local left = 30
                             local asset = entryAsset(v) or normalizeAsset(type(v) == "table" and (v.Image or v.Icon))
                             if asset then
-                                local ic = makeIcon(r, asset, 18, Color3.new(1, 1, 1), 2)
+                                local ic = makeIcon(r, asset, 16, Color3.fromRGB(230, 226, 240), 2)
                                 ic.AnchorPoint = Vector2.new(0, 0.5)
-                                ic.Position = UDim2.new(0, 30, 0.5, 0)
-                                left = 56
+                                ic.Position = UDim2.new(0, 28, 0.5, 0)
+                                left = 52
                             end
 
                             mk("TextLabel", {
                                 Name = "Num",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Title,
-                                TextSize = 12,
+                                TextSize = 11,
                                 TextColor3 = accent,
                                 Text = "#" .. i,
                                 AnchorPoint = Vector2.new(0, 0.5),
                                 Position = UDim2.new(0, left, 0.5, 0),
-                                Size = UDim2.fromOffset(28, 18),
+                                Size = UDim2.fromOffset(26, 16),
                                 ZIndex = 2,
                                 Parent = r,
                             })
@@ -3215,8 +3236,8 @@ function VoidUI:CreateWindow(cfg)
                                 TextTruncate = Enum.TextTruncate.AtEnd,
                                 Text = entryLabel(v),
                                 AnchorPoint = Vector2.new(0, 0.5),
-                                Position = UDim2.new(0, left + 28, 0.5, 0),
-                                Size = UDim2.new(1, -(left + 40), 0, 20),
+                                Position = UDim2.new(0, left + 26, 0.5, 0),
+                                Size = UDim2.new(1, -(left + 36), 0, 18),
                                 ZIndex = 2,
                                 Parent = r,
                             })
@@ -3226,18 +3247,17 @@ function VoidUI:CreateWindow(cfg)
                                     and input.UserInputType ~= Enum.UserInputType.Touch then
                                     return
                                 end
-                                -- resolve live index from LayoutOrder (stable after swaps)
                                 local live = r.LayoutOrder
                                 startDrag(live, input)
                             end)
 
                             r.MouseEnter:Connect(function()
                                 if drag.active then return end
-                                tween(r, TI(0.12), { BackgroundColor3 = Color3.fromRGB(34, 28, 50) })
+                                tween(r, TI(0.1), { BackgroundColor3 = Color3.fromRGB(28, 24, 38) })
                             end)
                             r.MouseLeave:Connect(function()
                                 if drag.active then return end
-                                tween(r, TI(0.12), { BackgroundColor3 = Color3.fromRGB(26, 22, 36) })
+                                tween(r, TI(0.1), { BackgroundColor3 = Color3.fromRGB(22, 20, 30) })
                             end)
                         end
                         api.Values = items

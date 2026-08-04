@@ -1,36 +1,35 @@
 # VoidUI Changelog
 
+## 1.7.3 — Eager swap + denser clean
+
+### PriorityList
+- Swap ไวขึ้น: วัดจาก**กลาง ghost** + threshold ตามทิศ (ขึ้น ~78% / ลง ~22%) — ไม่ต้องลากพ้น midpoint
+- แถวแน่นขึ้น · tick บาง · มุม 8 · สีแบนลง
+
+### Density
+- Section card มุม 12 · stroke จาง · row pad แน่นขึ้น
+
+---
+
 ## 1.7.2 — Drag stick + hard Notify
 
 ### PriorityList drag
-- Ghost ติดจุดที่กดค้างแล้ว (sticky offset) — แก้สูตรหักครึ่งสูงซ้ำ + หัก GuiInset ผิดตอน `IgnoreGuiInset`
-- ตามเมาส์ด้วย `GetMouseLocation` ตอน MouseMovement
-- แถวแน่นขึ้น · ไอคอนเปล่าไม่มี chip ม่วง
+- Ghost sticky offset (แก้หักครึ่งสูงซ้ำ + GuiInset ผิด)
+- ตามเมาส์ด้วย `GetMouseLocation`
 
-### Notify (ตึง / ไม่ AI)
-- ไม่มี icon chip / accent wash / sparkle default
-- เส้นม่วงซ้าย 2px + ข้อความแน่น · มุม 8px · stroke เทา
-- Timer 1px ด้านล่าง · `Icon` ใส่เมื่อต้องการเท่านั้น
+### Notify
+- Hard toast: ไม่มี chip/wash · เส้นม่วงซ้าย · timer 1px
 
 ---
 
-## 1.7.1 — PriorityList / Assets / Notify
+## 1.7.1
 
-### PriorityList (drag)
-- ไม่ rebuild ทั้ง list ตอนลาก — ghost + LayoutOrder swap
-- Assets ทุกจุด (`Icon` / `Image` / rbxassetid / lucide)
-- Helper: `VoidUI.NormalizeAsset(x)`
-
-### Notify (1.7.1)
-- การ์ด glass + icon chip (แทนที่ด้วย hard toast ใน 1.7.2)
-
----
+- PriorityList ghost drag · assets ทุกจุด · `NormalizeAsset`
 
 ## 1.7.0
 
-- Sidebar tab tooltips · editable slider · full-width input
-- Dropdown images + search · PriorityList · Popup modal
+- Tooltips · editable slider · full-width input · dropdown images · Popup
 
 ## Cache note
 
-Pin commit SHA ใน `HttpGet` เสมอ — executor cache แรง
+Pin commit SHA ใน `HttpGet` เสมอ
