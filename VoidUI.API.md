@@ -131,11 +131,10 @@ S:Dropdown({
 
 ### Button
 ```lua
--- Clean row (default): ทั้งแถวคลิกได้ + ไอคอนขวา
+-- Clean row (default): ทั้งแถวคลิกได้ · Icon ขวาเป็น optional (ไม่ default play)
 S:Button({
-  Title = "Open Settings", Desc = "Modal…",
-  LeadingIcon = "lucide:settings",  -- ซ้ายหัวข้อ
-  Icon = "lucide:panel-top",        -- ขวา
+  Title = "Skip Wave",
+  Icon = "lucide:skip-forward",  -- ใส่เองต่อ action — ไม่งั้นไม่มีไอคอน
   Callback = function() end,
 })
 -- Style = "Accent" | "Soft" | "Ghost" → ปุ่มเต็มแถว
@@ -169,21 +168,25 @@ S:Divider()
 ```lua
 local prio = S:PriorityList({
   Title = "Farm Priority",
-  Desc = "Hold & drag to reorder",
+  Desc = "Drag to reorder · pull bottom to resize",
   Icon = "lucide:list-ordered",
   Values = {
     { Name = "Boss", Icon = "lucide:skull" },
-    { Name = "Quest", Icon = "rbxassetid://123" },
+    { Name = "Quest", Image = "rbxassetid://123" },
   },
+  RowHeight = 40,
+  MaxVisible = 5,       -- scroll ถ้ายาวเกิน
+  MinHeight = 120,
+  MaxHeight = 360,
+  Resizable = true,     -- ลากแถบล่างปรับสูง
   Flag = "farmPrio",
-  Callback = function(list) -- array เรียงใหม่
-    for i, v in ipairs(list) do print(i, type(v)=="table" and v.Name or v) end
-  end,
+  Callback = function(list) end,
+  OnResize = function(h) end,
 })
--- prio:Get() / prio:Set(newList, silent?)
+-- prio:Get() / prio:Set(newList, silent?) / prio:SetHeight(h) / prio:GetHeight()
 ```
 
-UX: กดค้างแล้วลาก — มี ghost ตามเมาส์, แถวต้นทางจาง, ไฮไลต์ช่องที่สลับ
+UX: กดค้างแล้วลาก — ghost ตามเมาส์ · viewport เลื่อนได้ · แถบม่วงล่าง = resize
 
 ---
 
@@ -207,14 +210,9 @@ sec:Button({ Title = "Close", Icon = "lucide:check", Callback = function() pop:C
 ## Notify
 
 ```lua
-VoidUI:Notify({
-  Title = "Saved",
-  Content = "Config written",
-  Icon = "lucide:check",          -- หรือ rbxassetid
-  Duration = 3.5,
-  Accent = Color3.fromRGB(162, 89, 255), -- optional
-})
+VoidUI:Notify({ Title=, Content=, Icon=, Duration= })
 ```
+Icon optional — ไม่ใส่จะได้ hard toast (เส้นม่วงซ้ายอย่างเดียว)
 
 ---
 

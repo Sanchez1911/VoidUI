@@ -8,14 +8,14 @@
       local W = VoidUI:CreateWindow({ Title=..., Icon=..., Accent=..., Search=true, OpenButton=true })
       Page:Section({ Title=..., Icon="rbxassetid://..." })
       S:Toggle / Slider / Dropdown / Button / Input / Keybind  — Icon/Image optional (prefer Section headers)
-      S:PriorityList({ Values={ {Name=, Icon=} }, Callback=fn }) -- smooth drag reorder
+      S:PriorityList({ Values=..., MaxVisible=, RowHeight=, Resizable=true, Callback=fn })
       W:Popup({ Title=..., Size=..., Icon=... })
       VoidUI:Notify({ Title=, Content=, Icon=, Duration= })
       Assets: "rbxassetid://N" | number | "lucide:name" anywhere Icon/Image is accepted
 ]]
 
 local VoidUI = {
-    Version = "1.7.5",
+    Version = "1.7.6",
     _windows = {},
 }
 
@@ -2532,16 +2532,22 @@ function VoidUI:CreateWindow(cfg)
                 function Section:Button(o)
                     o = o or {}
                     local style = string.lower(tostring(o.Style or "clean"))
-                    local iconName = o.Icon or "lucide:play"
+                    -- Icon optional — never default to play (was making every action look identical)
+                    local iconName = normalizeAsset(o.Icon or o.Image)
 
                     -- Clean row — whole row is clickable (not just the icon)
                     if style == "clean" or style == "row" or style == "icon" then
                         local row, _, right = makeRow(o.Title or "Button", o.Desc, o.LeadingIcon or o.LeadingImage)
-                        right.Size = UDim2.fromOffset(34, 34)
-
-                        local ih, img = makeIcon(right, iconName, 18, T.TextDim, 2)
-                        ih.AnchorPoint = Vector2.new(0.5, 0.5)
-                        ih.Position = UDim2.fromScale(0.5, 0.5)
+                        local img = nil
+                        if iconName then
+                            right.Size = UDim2.fromOffset(34, 34)
+                            local ih, ic = makeIcon(right, iconName, 18, T.TextDim, 2)
+                            ih.AnchorPoint = Vector2.new(0.5, 0.5)
+                            ih.Position = UDim2.fromScale(0.5, 0.5)
+                            img = ic
+                        else
+                            right.Size = UDim2.fromOffset(0, 0)
+                        end
 
                         local hitBg = row:FindFirstChildWhichIsA("Frame") -- first child is hover bg from makeRow
                         local hit = mk("TextButton", {
@@ -2557,7 +2563,7 @@ function VoidUI:CreateWindow(cfg)
                             if hitBg then
                                 tween(hitBg, TI(0.12), { BackgroundTransparency = on and 0.78 or 1 })
                             end
-                            setIconColor(img, on and accent or T.TextDim)
+                            if img then setIconColor(img, on and accent or T.TextDim) end
                         end
                         hit.MouseEnter:Connect(function() setHover(true) end)
                         hit.MouseLeave:Connect(function() setHover(false) end)
@@ -2929,8 +2935,8 @@ function VoidUI:CreateWindow(cfg)
                         items[i] = v
                     end
 
-                    local ROW_H = 48
-                    local ROW_GAP = 6
+                    local ROW_H = math.clamp(math.floor(tonumber(o.RowHeight) or 40), 32, 56)
+                    local ROW_GAP = 4
 
                     addDivider()
                     rowOrder = rowOrder + 1
@@ -2942,31 +2948,31 @@ function VoidUI:CreateWindow(cfg)
                         Parent = card,
                     })
                     pad(wrap, 6, 8, 8, 8)
-                    list(wrap, Enum.FillDirection.Vertical, 5)
+                    list(wrap, Enum.FillDirection.Vertical, 4)
                     registerSearch(wrap, o.Title or "Priority", o.Desc)
 
                     if o.Title then
                         local head = mk("Frame", {
                             BackgroundTransparency = 1,
-                            Size = UDim2.new(1, 0, 0, 20),
+                            Size = UDim2.new(1, 0, 0, 18),
                             Parent = wrap,
                         })
                         local hx = 0
                         local titleAsset = normalizeAsset(o.Icon or o.Image)
                         if titleAsset then
-                            local th = makeIcon(head, titleAsset, 17, accent, 2)
+                            local th = makeIcon(head, titleAsset, 15, accent, 2)
                             th.Position = UDim2.fromOffset(0, 1)
-                            hx = 24
+                            hx = 22
                         end
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
-                            TextSize = 15,
+                            TextSize = 14,
                             TextColor3 = T.Text,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             Text = o.Title,
                             Position = UDim2.fromOffset(hx, 0),
-                            Size = UDim2.new(1, -hx, 0, 20),
+                            Size = UDim2.new(1, -hx, 0, 18),
                             Parent = head,
                         })
                     end
@@ -2974,7 +2980,7 @@ function VoidUI:CreateWindow(cfg)
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
-                            TextSize = 12,
+                            TextSize = 11,
                             TextColor3 = T.TextMute,
                             TextWrapped = true,
                             Text = o.Desc,
@@ -2984,16 +2990,60 @@ function VoidUI:CreateWindow(cfg)
                         })
                     end
 
-                    local listFrame = mk("Frame", {
-                        BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 0, 0),
-                        AutomaticSize = Enum.AutomaticSize.Y,
-                        ClipsDescendants = false,
-                        Parent = wrap,
-                    })
+                    local function contentH(n)
+                        n = math.max(tonumber(n) or 1, 1)
+                        return n * ROW_H + math.max(0, n - 1) * ROW_GAP
+                    end
+
+                    local maxVis = tonumber(o.MaxVisible) or tonumber(o.VisibleRows)
+                    local resizable = o.Resizable == true
+                    local minH = tonumber(o.MinHeight) or contentH(3)
+                    local maxH = tonumber(o.MaxHeight) or contentH(10)
+                    local viewH = tonumber(o.Height)
+                    if not viewH and maxVis then
+                        viewH = contentH(maxVis)
+                    end
+                    local useScroll = viewH ~= nil or resizable
+                    if useScroll and not viewH then
+                        viewH = contentH(math.min(5, math.max(#items, 3)))
+                    end
+                    if viewH then
+                        viewH = math.clamp(viewH, minH, maxH)
+                    end
+
+                    local scroll
+                    local listFrame
+                    if useScroll then
+                        scroll = mk("ScrollingFrame", {
+                            BackgroundTransparency = 1,
+                            BorderSizePixel = 0,
+                            Size = UDim2.new(1, 0, 0, viewH),
+                            CanvasSize = UDim2.fromOffset(0, contentH(#items)),
+                            ScrollBarThickness = 3,
+                            ScrollBarImageColor3 = accent,
+                            ScrollBarImageTransparency = 0.4,
+                            ScrollingEnabled = true,
+                            ClipsDescendants = true,
+                            Parent = wrap,
+                        })
+                        listFrame = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 0),
+                            AutomaticSize = Enum.AutomaticSize.Y,
+                            Parent = scroll,
+                        })
+                    else
+                        listFrame = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 0),
+                            AutomaticSize = Enum.AutomaticSize.Y,
+                            ClipsDescendants = false,
+                            Parent = wrap,
+                        })
+                    end
                     list(listFrame, Enum.FillDirection.Vertical, ROW_GAP)
 
-                    local api = { Values = items }
+                    local api = { Values = items, Height = viewH, RowHeight = ROW_H }
                     local rowFrames = {}
                     local drag = {
                         active = false,
@@ -3261,6 +3311,22 @@ function VoidUI:CreateWindow(cfg)
                             end)
                         end
                         api.Values = items
+                        if scroll then
+                            local h = contentH(#items)
+                            scroll.CanvasSize = UDim2.fromOffset(0, h)
+                            scroll.ScrollingEnabled = h > (scroll.AbsoluteSize.Y > 0 and scroll.AbsoluteSize.Y or (viewH or 0))
+                        end
+                    end
+
+                    local function applyViewH(h)
+                        if not scroll then return end
+                        viewH = math.clamp(math.floor(tonumber(h) or viewH or minH), minH, maxH)
+                        api.Height = viewH
+                        scroll.Size = UDim2.new(1, 0, 0, viewH)
+                        local ch = contentH(#items)
+                        scroll.CanvasSize = UDim2.fromOffset(0, ch)
+                        scroll.ScrollingEnabled = ch > viewH
+                        if o.OnResize then task.spawn(o.OnResize, viewH) end
                     end
 
                     UserInputService.InputChanged:Connect(function(input)
@@ -3288,8 +3354,64 @@ function VoidUI:CreateWindow(cfg)
                     function api:Get()
                         return items
                     end
+                    function api:SetHeight(h, silent)
+                        applyViewH(h)
+                        if not silent and o.OnResize then task.spawn(o.OnResize, api.Height) end
+                    end
+                    function api:GetHeight()
+                        return api.Height
+                    end
 
                     buildRows()
+
+                    -- Bottom grip — drag to resize visible height (PriorityList only when scroll)
+                    if resizable and scroll then
+                        local grip = mk("TextButton", {
+                            BackgroundColor3 = Color3.fromRGB(28, 24, 38),
+                            BackgroundTransparency = 0.35,
+                            AutoButtonColor = false,
+                            Text = "",
+                            Size = UDim2.new(1, 0, 0, 12),
+                            Parent = wrap,
+                        })
+                        corner(grip, 6)
+                        mk("Frame", {
+                            BackgroundColor3 = accent,
+                            BackgroundTransparency = 0.45,
+                            AnchorPoint = Vector2.new(0.5, 0.5),
+                            Position = UDim2.fromScale(0.5, 0.5),
+                            Size = UDim2.fromOffset(36, 3),
+                            BorderSizePixel = 0,
+                            Parent = grip,
+                        })
+                        local resizing = false
+                        local startY, startH = 0, viewH or minH
+                        grip.InputBegan:Connect(function(input)
+                            if input.UserInputType ~= Enum.UserInputType.MouseButton1
+                                and input.UserInputType ~= Enum.UserInputType.Touch then
+                                return
+                            end
+                            resizing = true
+                            startY = input.Position.Y
+                            startH = viewH or scroll.AbsoluteSize.Y
+                        end)
+                        UserInputService.InputChanged:Connect(function(input)
+                            if not resizing then return end
+                            if input.UserInputType ~= Enum.UserInputType.MouseMovement
+                                and input.UserInputType ~= Enum.UserInputType.Touch then
+                                return
+                            end
+                            applyViewH(startH + (input.Position.Y - startY))
+                        end)
+                        UserInputService.InputEnded:Connect(function(input)
+                            if not resizing then return end
+                            if input.UserInputType == Enum.UserInputType.MouseButton1
+                                or input.UserInputType == Enum.UserInputType.Touch then
+                                resizing = false
+                            end
+                        end)
+                    end
+
                     if o.Flag then Window._flags[o.Flag] = api end
                     return api
                 end

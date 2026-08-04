@@ -1,5 +1,22 @@
 # VoidUI Changelog
 
+## 1.7.6 — Clean actions + PriorityList resize
+
+### Button
+- **ไม่ default `lucide:play` อีก** — ใส่ `Icon`/`Image` เองเท่านั้น (ไม่งั้นไม่มีไอคอนขวา)
+- กันปุ่มทุกแถวหน้าตาเหมือนกัน
+
+### PriorityList
+- Default `RowHeight = 40` (แน่นพอดี)
+- `MaxVisible` / `Height` → scroll viewport
+- `Resizable = true` → ลากแถบล่างปรับความสูง (`MinHeight` / `MaxHeight`)
+- `api:SetHeight` / `api:GetHeight` / `OnResize`
+
+### UX
+- ยัง clean: icon ที่หัวข้อ Section + action ที่จำเป็น + game `rbxassetid` ใน Dropdown Values
+
+---
+
 ## 1.7.5 — Balanced comfort scale
 
 1.7.4 แน่น/จิ๋วเกิน — ดึงกลับกลาง ๆ ให้คลิกง่าย สมดุลกับข้อความ
