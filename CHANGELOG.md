@@ -1,5 +1,15 @@
 # VoidUI Changelog
 
+## 1.7.11 — Clearer Section headers
+
+### Section
+- หัวข้อ **16px** (เดิม 14) · สว่างขึ้น
+- ไอคอนหัวข้อ **20px** · จัดกลางแนวตั้ง
+- `rbxassetid` ไม่ถูก tint ม่วง (เห็นสีเกมจริง) · lucide ยัง accent
+- เส้นใต้หัวข้อยาวขึ้นเล็กน้อย
+
+---
+
 ## 1.7.10 — Dropdown text size locked
 
 ### Fix

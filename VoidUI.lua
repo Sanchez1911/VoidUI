@@ -15,7 +15,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.7.10",
+    Version = "1.7.11",
     _windows = {},
 }
 
@@ -1672,39 +1672,44 @@ function VoidUI:CreateWindow(cfg)
                 })
                 list(wrap, Enum.FillDirection.Vertical, 8)
 
+                -- Section header — larger + clearer (was 14px / icon 14 → hard to scan)
                 local headRow = mk("Frame", {
                     BackgroundTransparency = 1,
-                    Size = UDim2.new(1, 0, 0, 18),
+                    Size = UDim2.new(1, 0, 0, 26),
                     Parent = wrap,
                 })
                 local titleX = 0
                 if secIcon then
-                    local ih = makeIcon(headRow, secIcon, 14, accent, 2)
-                    ih.Position = UDim2.fromOffset(0, 2)
-                    titleX = 20
+                    -- Game rbxassetid keep full color; lucide tint accent
+                    local iconCol = (type(secIcon) == "string" and secIcon:find("rbxassetid", 1, true))
+                        and Color3.new(1, 1, 1) or accent
+                    local ih = makeIcon(headRow, secIcon, 20, iconCol, 2)
+                    ih.AnchorPoint = Vector2.new(0, 0.5)
+                    ih.Position = UDim2.new(0, 0, 0.5, 0)
+                    titleX = 28
                 end
                 bloomLabel({
                     Parent = headRow,
                     Name = "SectionTitle",
                     Text = string.upper(secTitle),
-                    TextSize = 14,
+                    TextSize = 16,
                     Font = Fonts.Title,
-                    Color = Color3.fromRGB(236, 228, 255),
+                    Color = Color3.fromRGB(245, 240, 255),
                     Accent = accent,
                     Bloom = bloomOn,
-                    Height = 20,
-                    Position = UDim2.fromOffset(titleX, 0),
-                    Size = UDim2.new(1, -titleX, 0, 20),
+                    Height = 22,
+                    Position = UDim2.fromOffset(titleX, 2),
+                    Size = UDim2.new(1, -titleX, 0, 22),
                 })
                 -- accent tick under header when bloom on
                 if bloomOn then
                     local tick = mk("Frame", {
                         BackgroundColor3 = accent,
-                        BackgroundTransparency = 0.35,
+                        BackgroundTransparency = 0.3,
                         BorderSizePixel = 0,
                         AnchorPoint = Vector2.new(0, 1),
-                        Position = UDim2.new(0, titleX, 1, 1),
-                        Size = UDim2.fromOffset(18, 2),
+                        Position = UDim2.new(0, titleX, 1, 0),
+                        Size = UDim2.fromOffset(28, 2),
                         Parent = headRow,
                     })
                     corner(tick, 1)
