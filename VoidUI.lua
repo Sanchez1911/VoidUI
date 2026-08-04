@@ -1,18 +1,21 @@
 --[[
     VoidUI — voidw0rld style (glass + header bloom + search)
+    Docs: CHANGELOG.md · VoidUI.API.md
     Usage:
       local VoidUI = loadstring(game:HttpGet(".../VoidUI.lua"))()
 
     API sketch:
       local W = VoidUI:CreateWindow({ Title=..., Icon=..., Accent=..., Search=true, OpenButton=true })
-      S:Toggle / Slider (editable value) / Dropdown (images+search) / Button / Input / Keybind
-      S:PriorityList({ Values={...}, Callback=fn }) -- drag reorder
-      W:Popup({ Title=..., Size=..., Icon=... }) -- modal settings page
-      Dropdown Values may be strings OR { Name=, Image="rbxassetid://...", Icon="lucide:..." }
+      Page:Section({ Title=..., Icon="rbxassetid://..." })
+      S:Toggle / Slider / Dropdown / Button / Input / Keybind  — Icon/Image on any row
+      S:PriorityList({ Values={ {Name=, Icon=} }, Callback=fn }) -- smooth drag reorder
+      W:Popup({ Title=..., Size=..., Icon=... })
+      VoidUI:Notify({ Title=, Content=, Icon=, Duration= })
+      Assets: "rbxassetid://N" | number | "lucide:name" anywhere Icon/Image is accepted
 ]]
 
 local VoidUI = {
-    Version = "1.7.0",
+    Version = "1.7.1",
     _windows = {},
 }
 
@@ -77,6 +80,15 @@ local function entryAsset(v)
     if type(a) == "number" then return "rbxassetid://" .. tostring(a) end
     return a
 end
+-- Accept number / "rbxassetid://…" / "lucide:…" / table with Icon|Image|Asset
+local function normalizeAsset(a)
+    if a == nil or a == false or a == "" then return nil end
+    if type(a) == "number" then return "rbxassetid://" .. tostring(a) end
+    if type(a) == "string" then return a end
+    if type(a) == "table" then return entryAsset(a) end
+    return nil
+end
+VoidUI.NormalizeAsset = normalizeAsset
 local function entriesEqual(a, b)
     if a == b then return true end
     if type(a) == "table" or type(b) == "table" then
@@ -355,7 +367,8 @@ local function bloomLabel(opts)
     local wrap = mk("Frame", {
         Name = opts.Name or "BloomText",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, height),
+        Size = opts.Size or UDim2.new(1, 0, 0, height),
+        Position = opts.Position,
         LayoutOrder = layoutOrder,
         Parent = parent,
     })
@@ -435,25 +448,52 @@ function VoidUI:Notify(opts)
     local host = ensureNotifHost()
     local duration = opts.Duration or 3.5
     local accent = opts.Accent or Theme.Accent
+    local iconName = opts.Icon or "lucide:bell"
 
     local card = mk("Frame", {
-        BackgroundColor3 = Theme.BgPanel,
-        Size = UDim2.fromOffset(300, 0),
+        BackgroundColor3 = Color3.fromRGB(16, 14, 24),
+        Size = UDim2.fromOffset(310, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
+        ClipsDescendants = true,
         Parent = host,
     })
-    corner(card, 16)
-    stroke(card, Theme.Stroke, 1, 0.3)
-    pad(card, 14, 14, 14, 14)
+    corner(card, 14)
+    stroke(card, accent, 1.2, 0.55)
+    pad(card, 12, 14, 14, 14)
+
+    -- soft accent wash
+    mk("Frame", {
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.92,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 28, 1, 28),
+        Position = UDim2.fromOffset(-14, -14),
+        ZIndex = 0,
+        Parent = card,
+    })
 
     local bar = mk("Frame", {
         BackgroundColor3 = accent,
-        Size = UDim2.new(0, 3, 1, 0),
-        Position = UDim2.fromOffset(0, 0),
+        Size = UDim2.new(0, 3, 1, 8),
+        Position = UDim2.fromOffset(-14, -4),
         BorderSizePixel = 0,
+        ZIndex = 2,
         Parent = card,
     })
     corner(bar, 2)
+
+    local iconChip = mk("Frame", {
+        BackgroundColor3 = accent,
+        BackgroundTransparency = 0.82,
+        Size = UDim2.fromOffset(32, 32),
+        Position = UDim2.fromOffset(0, 0),
+        ZIndex = 2,
+        Parent = card,
+    })
+    corner(iconChip, 10)
+    local ih = makeIcon(iconChip, iconName, 16, accent, 3)
+    ih.AnchorPoint = Vector2.new(0.5, 0.5)
+    ih.Position = UDim2.fromScale(0.5, 0.5)
 
     mk("TextLabel", {
         BackgroundTransparency = 1,
@@ -461,14 +501,17 @@ function VoidUI:Notify(opts)
         TextSize = 14,
         TextColor3 = Theme.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         Text = opts.Title or "Notification",
-        Size = UDim2.new(1, -8, 0, 18),
-        Position = UDim2.fromOffset(8, 0),
+        Size = UDim2.new(1, -44, 0, 18),
+        Position = UDim2.fromOffset(40, 1),
+        ZIndex = 2,
         Parent = card,
     })
 
+    local contentH = 0
     if opts.Content and opts.Content ~= "" then
-        mk("TextLabel", {
+        local body = mk("TextLabel", {
             BackgroundTransparency = 1,
             Font = Fonts.Desc,
             TextSize = 12,
@@ -477,19 +520,39 @@ function VoidUI:Notify(opts)
             TextYAlignment = Enum.TextYAlignment.Top,
             TextWrapped = true,
             Text = opts.Content,
-            Size = UDim2.new(1, -8, 0, 0),
+            Size = UDim2.new(1, -44, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
-            Position = UDim2.fromOffset(8, 22),
+            Position = UDim2.fromOffset(40, 22),
+            ZIndex = 2,
             Parent = card,
         })
+        contentH = 8
     end
 
+    local timer = mk("Frame", {
+        BackgroundColor3 = accent,
+        BorderSizePixel = 0,
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, -14, 1, 14),
+        Size = UDim2.new(1, 28, 0, 2),
+        ZIndex = 3,
+        Parent = card,
+    })
+
+    card.Position = UDim2.new(0, 40, 0, 0)
     card.BackgroundTransparency = 1
-    tween(card, TI(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { BackgroundTransparency = 0.05 })
+    tween(card, TI(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        BackgroundTransparency = 0.08,
+        Position = UDim2.new(0, 0, 0, 0),
+    })
+    tween(timer, TI(duration, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 0, 2) })
 
     task.delay(duration, function()
         if not card.Parent then return end
-        local tw = tween(card, TI(0.2), { BackgroundTransparency = 1 })
+        local tw = tween(card, TI(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 36, 0, 0),
+        })
         tw.Completed:Wait()
         card:Destroy()
     end)
@@ -1609,6 +1672,7 @@ function VoidUI:CreateWindow(cfg)
                 local colIndex = sopts.Column or 1
                 local parentCol = colFrames[colIndex] or colFrames[1]
                 local secTitle = sopts.Title or "SECTION"
+                local secIcon = normalizeAsset(sopts.Icon or sopts.Image)
 
                 local wrap = mk("Frame", {
                     BackgroundTransparency = 1,
@@ -1623,6 +1687,12 @@ function VoidUI:CreateWindow(cfg)
                     Size = UDim2.new(1, 0, 0, 18),
                     Parent = wrap,
                 })
+                local titleX = 0
+                if secIcon then
+                    local ih = makeIcon(headRow, secIcon, 14, accent, 2)
+                    ih.Position = UDim2.fromOffset(0, 2)
+                    titleX = 20
+                end
                 bloomLabel({
                     Parent = headRow,
                     Name = "SectionTitle",
@@ -1633,6 +1703,8 @@ function VoidUI:CreateWindow(cfg)
                     Accent = accent,
                     Bloom = bloomOn,
                     Height = 18,
+                    Position = UDim2.fromOffset(titleX, 0),
+                    Size = UDim2.new(1, -titleX, 0, 18),
                 })
                 -- accent tick under header when bloom on
                 if bloomOn then
@@ -1641,7 +1713,7 @@ function VoidUI:CreateWindow(cfg)
                         BackgroundTransparency = 0.35,
                         BorderSizePixel = 0,
                         AnchorPoint = Vector2.new(0, 1),
-                        Position = UDim2.new(0, 0, 1, 1),
+                        Position = UDim2.new(0, titleX, 1, 1),
                         Size = UDim2.fromOffset(18, 2),
                         Parent = headRow,
                     })
@@ -1704,7 +1776,8 @@ function VoidUI:CreateWindow(cfg)
                 end
 
                 -- base row container: fixed comfortable height, left text + right control slot
-                local function makeRow(titleText, descText)
+                -- iconSpec: string|number|{Icon/Image} optional leading asset
+                local function makeRow(titleText, descText, iconSpec)
                     addDivider()
                     rowOrder = rowOrder + 1
                     local row = mk("Frame", {
@@ -1735,9 +1808,19 @@ function VoidUI:CreateWindow(cfg)
                         tween(hitBg, TI(0.12), { BackgroundTransparency = 1 })
                     end)
 
+                    local leftPad = 0
+                    local rowIcon = normalizeAsset(iconSpec)
+                    if rowIcon then
+                        local ic = makeIcon(row, rowIcon, 18, Color3.new(1, 1, 1), 2)
+                        ic.AnchorPoint = Vector2.new(0, 0.5)
+                        ic.Position = UDim2.new(0, 2, 0.5, 0)
+                        leftPad = 26
+                    end
+
                     local left = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(1, -112, 0, 0),
+                        Position = UDim2.fromOffset(leftPad, 0),
+                        Size = UDim2.new(1, -(112 + leftPad), 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
                         Parent = row,
                     })
@@ -1786,7 +1869,7 @@ function VoidUI:CreateWindow(cfg)
                 function Section:Toggle(o)
                     o = o or {}
                     local value = o.Value and true or false
-                    local row, _, right = makeRow(o.Title or "Toggle", o.Desc)
+                    local row, _, right = makeRow(o.Title or "Toggle", o.Desc, o.Icon or o.Image)
 
                     right.Size = UDim2.fromOffset(48, 28)
                     local track = mk("Frame", {
@@ -1873,6 +1956,13 @@ function VoidUI:CreateWindow(cfg)
                         LayoutOrder = 1,
                         Parent = row,
                     })
+                    local sliderIcon = normalizeAsset(o.Icon or o.Image)
+                    local sliderTitleX = 0
+                    if sliderIcon then
+                        local sic = makeIcon(top, sliderIcon, 16, Color3.new(1, 1, 1), 2)
+                        sic.Position = UDim2.fromOffset(0, 0)
+                        sliderTitleX = 22
+                    end
                     mk("TextLabel", {
                         BackgroundTransparency = 1,
                         Font = Fonts.Title,
@@ -1880,7 +1970,8 @@ function VoidUI:CreateWindow(cfg)
                         TextColor3 = T.Text,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Text = o.Title or "Slider",
-                        Size = UDim2.new(1, -78, 1, 0),
+                        Position = UDim2.fromOffset(sliderTitleX, 0),
+                        Size = UDim2.new(1, -(78 + sliderTitleX), 1, 0),
                         Parent = top,
                     })
                     local function fmt(v)
@@ -2051,7 +2142,7 @@ function VoidUI:CreateWindow(cfg)
                         if current == nil then current = values[1] end
                     end
 
-                    local row, _, right = makeRow(o.Title or "Dropdown", o.Desc)
+                    local row, _, right = makeRow(o.Title or "Dropdown", o.Desc, o.Icon or o.Image)
                     right.Size = UDim2.fromOffset(136, 30)
 
                     local box = mk("TextButton", {
@@ -2455,7 +2546,7 @@ function VoidUI:CreateWindow(cfg)
 
                     -- Clean row — whole row is clickable (not just the icon)
                     if style == "clean" or style == "row" or style == "icon" then
-                        local row, _, right = makeRow(o.Title or "Button", o.Desc)
+                        local row, _, right = makeRow(o.Title or "Button", o.Desc, o.LeadingIcon or o.LeadingImage)
                         right.Size = UDim2.fromOffset(30, 30)
 
                         local ih, img = makeIcon(right, iconName, 16, T.TextDim, 2)
@@ -2606,6 +2697,19 @@ function VoidUI:CreateWindow(cfg)
                     list(row, Enum.FillDirection.Vertical, 6)
                     registerSearch(row, o.Title or "Input", o.Desc)
 
+                    local inputHead = mk("Frame", {
+                        BackgroundTransparency = 1,
+                        Size = UDim2.new(1, 0, 0, 17),
+                        LayoutOrder = 1,
+                        Parent = row,
+                    })
+                    local inputIconX = 0
+                    local inputAsset = normalizeAsset(o.Icon or o.Image)
+                    if inputAsset then
+                        local ih = makeIcon(inputHead, inputAsset, 16, Color3.new(1, 1, 1), 2)
+                        ih.Position = UDim2.fromOffset(0, 0)
+                        inputIconX = 22
+                    end
                     mk("TextLabel", {
                         BackgroundTransparency = 1,
                         Font = Fonts.Title,
@@ -2613,9 +2717,9 @@ function VoidUI:CreateWindow(cfg)
                         TextColor3 = T.Text,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Text = o.Title or "Input",
-                        Size = UDim2.new(1, 0, 0, 17),
-                        LayoutOrder = 1,
-                        Parent = row,
+                        Position = UDim2.fromOffset(inputIconX, 0),
+                        Size = UDim2.new(1, -inputIconX, 0, 17),
+                        Parent = inputHead,
                     })
                     if o.Desc and o.Desc ~= "" then
                         mk("TextLabel", {
@@ -2681,7 +2785,7 @@ function VoidUI:CreateWindow(cfg)
                 function Section:Keybind(o)
                     o = o or {}
                     local key = o.Value or Enum.KeyCode.Unknown
-                    local _, _, right = makeRow(o.Title or "Keybind", o.Desc)
+                    local _, _, right = makeRow(o.Title or "Keybind", o.Desc, o.Icon or o.Image)
                     right.Size = UDim2.fromOffset(100, 30)
                     local box = mk("TextButton", {
                         BackgroundColor3 = T.BgInput,
@@ -2761,6 +2865,19 @@ function VoidUI:CreateWindow(cfg)
                     list(row, Enum.FillDirection.Vertical, 3)
                     registerSearch(row, o.Title, o.Content or o.Desc)
                     if o.Title then
+                        local pHead = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 17),
+                            LayoutOrder = 1,
+                            Parent = row,
+                        })
+                        local px = 0
+                        local pAsset = normalizeAsset(o.Icon or o.Image)
+                        if pAsset then
+                            local pi = makeIcon(pHead, pAsset, 16, accent, 2)
+                            pi.Position = UDim2.fromOffset(0, 0)
+                            px = 22
+                        end
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
@@ -2768,9 +2885,9 @@ function VoidUI:CreateWindow(cfg)
                             TextColor3 = T.Text,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             Text = o.Title,
-                            Size = UDim2.new(1, 0, 0, 17),
-                            LayoutOrder = 1,
-                            Parent = row,
+                            Position = UDim2.fromOffset(px, 0),
+                            Size = UDim2.new(1, -px, 0, 17),
+                            Parent = pHead,
                         })
                     end
                     local body = mk("TextLabel", {
@@ -2813,7 +2930,7 @@ function VoidUI:CreateWindow(cfg)
                 end
 
                 -----------------------------------------------------------------
-                -- PriorityList — drag-reorder list (hold & drag)
+                -- PriorityList — smooth drag-reorder (ghost + LayoutOrder swap)
                 -----------------------------------------------------------------
                 function Section:PriorityList(o)
                     o = o or {}
@@ -2821,6 +2938,9 @@ function VoidUI:CreateWindow(cfg)
                     for i, v in ipairs(o.Values or {}) do
                         items[i] = v
                     end
+
+                    local ROW_H = 46
+                    local ROW_GAP = 6
 
                     addDivider()
                     rowOrder = rowOrder + 1
@@ -2836,14 +2956,28 @@ function VoidUI:CreateWindow(cfg)
                     registerSearch(wrap, o.Title or "Priority", o.Desc)
 
                     if o.Title then
+                        local head = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 18),
+                            Parent = wrap,
+                        })
+                        local hx = 0
+                        local titleAsset = normalizeAsset(o.Icon or o.Image)
+                        if titleAsset then
+                            local th = makeIcon(head, titleAsset, 16, accent, 2)
+                            th.Position = UDim2.fromOffset(0, 1)
+                            hx = 22
+                        end
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
                             TextSize = 14,
                             TextColor3 = T.Text,
+                            TextXAlignment = Enum.TextXAlignment.Left,
                             Text = o.Title,
-                            Size = UDim2.new(1, 0, 0, 17),
-                            Parent = wrap,
+                            Position = UDim2.fromOffset(hx, 0),
+                            Size = UDim2.new(1, -hx, 0, 17),
+                            Parent = head,
                         })
                     end
                     if o.Desc and o.Desc ~= "" then
@@ -2864,59 +2998,227 @@ function VoidUI:CreateWindow(cfg)
                         BackgroundTransparency = 1,
                         Size = UDim2.new(1, 0, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
+                        ClipsDescendants = false,
                         Parent = wrap,
                     })
-                    local layout = list(listFrame, Enum.FillDirection.Vertical, 4)
+                    list(listFrame, Enum.FillDirection.Vertical, ROW_GAP)
 
                     local api = { Values = items }
                     local rowFrames = {}
-                    local dragState = { active = false, from = 0, startY = 0, startIdx = 0 }
+                    local drag = {
+                        active = false,
+                        idx = 0,
+                        ghost = nil,
+                        grabDY = 0,
+                    }
 
                     local function fire()
                         if o.Callback then task.spawn(o.Callback, items) end
                     end
 
-                    local function rebuild()
+                    local function paintRest(r, i, lit)
+                        r.LayoutOrder = i
+                        local num = r:FindFirstChild("Num")
+                        if num then num.Text = "#" .. tostring(i) end
+                        if lit then
+                            r.BackgroundColor3 = Color3.fromRGB(46, 34, 72)
+                            local st = r:FindFirstChildOfClass("UIStroke")
+                            if st then
+                                st.Color = accent
+                                st.Transparency = 0.25
+                            end
+                        else
+                            r.BackgroundColor3 = Color3.fromRGB(26, 22, 36)
+                            local st = r:FindFirstChildOfClass("UIStroke")
+                            if st then
+                                st.Color = Color3.fromRGB(48, 46, 58)
+                                st.Transparency = 0.55
+                            end
+                        end
+                    end
+
+                    local function syncOrders(litIdx)
+                        for i, r in ipairs(rowFrames) do
+                            paintRest(r, i, litIdx == i)
+                        end
+                        api.Values = items
+                    end
+
+                    local function moveItem(from, to)
+                        if from == to or from < 1 or to < 1 or from > #items or to > #items then return end
+                        local it = table.remove(items, from)
+                        table.insert(items, to, it)
+                        local rf = table.remove(rowFrames, from)
+                        table.insert(rowFrames, to, rf)
+                        syncOrders(to)
+                    end
+
+                    local function indexAtY(absY)
+                        for i, r in ipairs(rowFrames) do
+                            local mid = r.AbsolutePosition.Y + r.AbsoluteSize.Y * 0.5
+                            if absY < mid then return i end
+                        end
+                        return #rowFrames
+                    end
+
+                    local function clearGhost()
+                        if drag.ghost then
+                            drag.ghost:Destroy()
+                            drag.ghost = nil
+                        end
+                    end
+
+                    local function endDrag()
+                        if not drag.active then return end
+                        drag.active = false
+                        clearGhost()
+                        for i, r in ipairs(rowFrames) do
+                            r.BackgroundTransparency = 0
+                            local sc = r:FindFirstChild("DragScale")
+                            if sc then sc:Destroy() end
+                            paintRest(r, i, false)
+                        end
+                        fire()
+                    end
+
+                    local function startDrag(idx, input)
+                        if drag.active or idx < 1 or idx > #rowFrames then return end
+                        local src = rowFrames[idx]
+                        drag.active = true
+                        drag.idx = idx
+                        drag.grabDY = input.Position.Y - (src.AbsolutePosition.Y + src.AbsoluteSize.Y * 0.5)
+
+                        src.BackgroundTransparency = 0.45
+                        local sc = Instance.new("UIScale")
+                        sc.Name = "DragScale"
+                        sc.Scale = 0.98
+                        sc.Parent = src
+
+                        local sg = listFrame:FindFirstAncestorOfClass("ScreenGui")
+                        local ghostParent = sg or listFrame
+                        local g = src:Clone()
+                        g.Name = "VoidDragGhost"
+                        g.BackgroundTransparency = 0.08
+                        g.BackgroundColor3 = Color3.fromRGB(52, 38, 82)
+                        g.Size = UDim2.fromOffset(src.AbsoluteSize.X, src.AbsoluteSize.Y)
+                        g.Parent = ghostParent
+                        for _, d in ipairs(g:GetDescendants()) do
+                            if d:IsA("GuiObject") then
+                                d.ZIndex = (d.ZIndex or 1) + 800
+                            end
+                        end
+                        g.ZIndex = 900
+                        local gst = g:FindFirstChildOfClass("UIStroke")
+                        if gst then
+                            gst.Color = accent
+                            gst.Transparency = 0.1
+                            gst.Thickness = 1.5
+                        end
+                        local gsc = g:FindFirstChild("DragScale")
+                        if gsc then gsc:Destroy() end
+                        local scale = Instance.new("UIScale")
+                        scale.Scale = 1.04
+                        scale.Parent = g
+                        drag.ghost = g
+
+                        local inset = GuiService:GetGuiInset()
+                        local function setGhostPos(pos)
+                            if not drag.ghost then return end
+                            local y = pos.Y - drag.grabDY - src.AbsoluteSize.Y * 0.5
+                            local x = src.AbsolutePosition.X
+                            if ghostParent:IsA("ScreenGui") then
+                                drag.ghost.Position = UDim2.fromOffset(x - inset.X, y - inset.Y)
+                            else
+                                local p = ghostParent.AbsolutePosition
+                                drag.ghost.Position = UDim2.fromOffset(x - p.X, y - p.Y)
+                            end
+                        end
+                        setGhostPos(input.Position)
+                        drag._setGhostPos = setGhostPos
+                        syncOrders(idx)
+                    end
+
+                    local function onDragMove(input)
+                        if not drag.active then return end
+                        if drag._setGhostPos then drag._setGhostPos(input.Position) end
+                        local target = indexAtY(input.Position.Y)
+                        if target ~= drag.idx then
+                            moveItem(drag.idx, target)
+                            drag.idx = target
+                        end
+                    end
+
+                    local function buildRows()
+                        clearGhost()
+                        drag.active = false
                         for _, r in ipairs(rowFrames) do
                             if r and r.Parent then r:Destroy() end
                         end
                         for i = #rowFrames, 1, -1 do rowFrames[i] = nil end
+
                         for i, v in ipairs(items) do
-                            local idx = i
                             local r = mk("TextButton", {
                                 BackgroundColor3 = Color3.fromRGB(26, 22, 36),
                                 AutoButtonColor = false,
                                 Text = "",
-                                Size = UDim2.new(1, 0, 0, 40),
+                                Size = UDim2.new(1, 0, 0, ROW_H),
                                 LayoutOrder = i,
                                 Parent = listFrame,
                             })
-                            corner(r, 10)
+                            corner(r, 12)
                             stroke(r, Color3.fromRGB(48, 46, 58), 1, 0.55)
                             rowFrames[i] = r
 
-                            local grip = makeIcon(r, "lucide:grip-vertical", 14, T.TextMute, 2)
-                            grip.Position = UDim2.fromOffset(8, 13)
+                            -- left accent chip
+                            local chip = mk("Frame", {
+                                BackgroundColor3 = accent,
+                                BackgroundTransparency = 0.82,
+                                Size = UDim2.fromOffset(3, ROW_H - 14),
+                                Position = UDim2.fromOffset(0, 7),
+                                BorderSizePixel = 0,
+                                ZIndex = 2,
+                                Parent = r,
+                            })
+                            corner(chip, 2)
 
-                            local left = 28
-                            local asset = entryAsset(v)
+                            local grip = makeIcon(r, "lucide:grip-vertical", 15, T.TextMute, 2)
+                            grip.AnchorPoint = Vector2.new(0, 0.5)
+                            grip.Position = UDim2.new(0, 10, 0.5, 0)
+
+                            local left = 32
+                            local asset = entryAsset(v) or normalizeAsset(type(v) == "table" and (v.Image or v.Icon))
                             if asset then
-                                local ic = makeIcon(r, asset, 20, Color3.new(1, 1, 1), 2)
-                                ic.Position = UDim2.fromOffset(28, 10)
-                                left = 54
+                                local icHold = mk("Frame", {
+                                    BackgroundColor3 = accent,
+                                    BackgroundTransparency = 0.88,
+                                    Size = UDim2.fromOffset(28, 28),
+                                    AnchorPoint = Vector2.new(0, 0.5),
+                                    Position = UDim2.new(0, 30, 0.5, 0),
+                                    ZIndex = 2,
+                                    Parent = r,
+                                })
+                                corner(icHold, 8)
+                                local ic = makeIcon(icHold, asset, 18, Color3.new(1, 1, 1), 3)
+                                ic.AnchorPoint = Vector2.new(0.5, 0.5)
+                                ic.Position = UDim2.fromScale(0.5, 0.5)
+                                left = 66
                             end
 
                             mk("TextLabel", {
+                                Name = "Num",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Title,
                                 TextSize = 12,
                                 TextColor3 = accent,
                                 Text = "#" .. i,
-                                Position = UDim2.fromOffset(left, 11),
+                                AnchorPoint = Vector2.new(0, 0.5),
+                                Position = UDim2.new(0, left, 0.5, 0),
                                 Size = UDim2.fromOffset(28, 18),
+                                ZIndex = 2,
                                 Parent = r,
                             })
                             mk("TextLabel", {
+                                Name = "Label",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Body,
                                 TextSize = 13,
@@ -2924,59 +3226,62 @@ function VoidUI:CreateWindow(cfg)
                                 TextXAlignment = Enum.TextXAlignment.Left,
                                 TextTruncate = Enum.TextTruncate.AtEnd,
                                 Text = entryLabel(v),
-                                Position = UDim2.fromOffset(left + 30, 10),
-                                Size = UDim2.new(1, -(left + 44), 0, 20),
+                                AnchorPoint = Vector2.new(0, 0.5),
+                                Position = UDim2.new(0, left + 28, 0.5, 0),
+                                Size = UDim2.new(1, -(left + 40), 0, 20),
+                                ZIndex = 2,
                                 Parent = r,
                             })
 
                             r.InputBegan:Connect(function(input)
-                                if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-                                dragState.active = true
-                                dragState.from = idx
-                                dragState.startIdx = idx
-                                dragState.startY = input.Position.Y
-                                tween(r, TI(0.1), { BackgroundColor3 = Color3.fromRGB(40, 30, 60) })
+                                if input.UserInputType ~= Enum.UserInputType.MouseButton1
+                                    and input.UserInputType ~= Enum.UserInputType.Touch then
+                                    return
+                                end
+                                -- resolve live index from LayoutOrder (stable after swaps)
+                                local live = r.LayoutOrder
+                                startDrag(live, input)
+                            end)
+
+                            r.MouseEnter:Connect(function()
+                                if drag.active then return end
+                                tween(r, TI(0.12), { BackgroundColor3 = Color3.fromRGB(34, 28, 50) })
+                            end)
+                            r.MouseLeave:Connect(function()
+                                if drag.active then return end
+                                tween(r, TI(0.12), { BackgroundColor3 = Color3.fromRGB(26, 22, 36) })
                             end)
                         end
                         api.Values = items
                     end
 
                     UserInputService.InputChanged:Connect(function(input)
-                        if not dragState.active then return end
-                        if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
-                        local dy = input.Position.Y - dragState.startY
-                        local step = 44
-                        local shift = math.floor((dy / step) + (dy >= 0 and 0.5 or -0.5))
-                        local newIdx = math.clamp(dragState.startIdx + shift, 1, #items)
-                        if newIdx ~= dragState.from then
-                            local item = table.remove(items, dragState.from)
-                            table.insert(items, newIdx, item)
-                            dragState.from = newIdx
-                            dragState.startIdx = newIdx
-                            dragState.startY = input.Position.Y
-                            rebuild()
+                        if not drag.active then return end
+                        if input.UserInputType ~= Enum.UserInputType.MouseMovement
+                            and input.UserInputType ~= Enum.UserInputType.Touch then
+                            return
                         end
+                        onDragMove(input)
                     end)
                     UserInputService.InputEnded:Connect(function(input)
-                        if not dragState.active then return end
-                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                            dragState.active = false
-                            rebuild()
-                            fire()
+                        if not drag.active then return end
+                        if input.UserInputType == Enum.UserInputType.MouseButton1
+                            or input.UserInputType == Enum.UserInputType.Touch then
+                            endDrag()
                         end
                     end)
 
                     function api:Set(listVals, silent)
                         items = {}
                         for i, v in ipairs(listVals or {}) do items[i] = v end
-                        rebuild()
+                        buildRows()
                         if not silent then fire() end
                     end
                     function api:Get()
                         return items
                     end
 
-                    rebuild()
+                    buildRows()
                     if o.Flag then Window._flags[o.Flag] = api end
                     return api
                 end

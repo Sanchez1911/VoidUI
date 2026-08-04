@@ -280,7 +280,13 @@ do
         Flag = "panicKey",
         Callback = function(k) print("bind", k) end,
         Pressed = function()
-            VoidUI:Notify({ Title = "Panic", Content = "All loops paused", Duration = 2 })
+            VoidUI:Notify({
+                Title = "Panic",
+                Content = "All loops paused",
+                Icon = "lucide:octagon-alert",
+                Duration = 2,
+            })
+
         end,
     })
 end
@@ -320,6 +326,7 @@ do
             VoidUI:Notify({
                 Title = "Priority Farm",
                 Content = v and "Enabled" or "Disabled",
+                Icon = v and "lucide:check" or "lucide:pause",
                 Duration = 2,
             })
         end,
@@ -342,7 +349,13 @@ Window:Tab({ Title = "Inventory", Icon = "lucide:backpack" })
         Icon = "lucide:bell",
         Desc = "Fire a sample notification",
         Callback = function()
-            VoidUI:Notify({ Title = "VoidUI", Content = "Library ready", Duration = 3 })
+            VoidUI:Notify({
+                Title = "VoidUI",
+                Content = "Library ready",
+                Icon = "lucide:sparkles",
+                Duration = 3,
+            })
+
         end,
     })
 
@@ -424,14 +437,16 @@ do
 end
 
 do
-    local demo = Settings:Section({ Title = "NEW · v1.7" })
+    local demo = Settings:Section({ Title = "NEW · v1.7.1", Icon = "lucide:sparkles" })
     demo:Paragraph({
         Title = "What's new",
-        Content = "Tab tooltips · editable slider · full-width input · dropdown images · PriorityList drag · Popup modal",
+        Icon = "lucide:info",
+        Content = "Smooth PriorityList ghost-drag · Icon/Image ทุก Section/แถว · Notify icon+timer · see CHANGELOG.md / VoidUI.API.md",
     })
     demo:Slider({
         Title = "Editable Scale",
         Desc = "Type a number in the box or drag",
+        Icon = "lucide:sliders-horizontal",
         Min = 0.25,
         Max = 3,
         Value = 1,
@@ -442,6 +457,7 @@ do
     demo:Input({
         Title = "Webhook URL",
         Desc = "Long text stays inside the field now",
+        Icon = "lucide:link",
         Placeholder = "https://discord.com/api/webhooks/...",
         Value = "https://discord.com/api/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz",
         Flag = "demoWebhook",
@@ -449,6 +465,7 @@ do
     demo:Dropdown({
         Title = "Unit (with icons)",
         Desc = "Values can be { Name, Image/Icon }",
+        Icon = "lucide:users",
         Values = {
             { Name = "Luffy", Icon = "lucide:swords" },
             { Name = "Zoro", Icon = "lucide:sword" },
@@ -462,6 +479,7 @@ do
     demo:PriorityList({
         Title = "Farm Priority",
         Desc = "Hold & drag rows to reorder",
+        Icon = "lucide:list-ordered",
         Values = {
             { Name = "Boss", Icon = "lucide:skull" },
             { Name = "Quest", Icon = "lucide:scroll-text" },
@@ -479,6 +497,7 @@ do
     })
     demo:Button({
         Title = "Open Popup Settings",
+        LeadingIcon = "lucide:settings",
         Icon = "lucide:panel-top",
         Desc = "Modal page like Expedition goals",
         Callback = function()
@@ -487,7 +506,7 @@ do
                 Icon = "lucide:settings",
                 Size = UDim2.fromOffset(400, 460),
             })
-            local s = pop:Section({ Title = "STOP WHEN" })
+            local s = pop:Section({ Title = "STOP WHEN", Icon = "lucide:flag" })
             if s then
                 s:Dropdown({
                     Title = "Mode",
@@ -498,6 +517,7 @@ do
                 s:PriorityList({
                     Title = "Goals",
                     Desc = "Drag to set priority",
+                    Icon = "lucide:list-ordered",
                     Values = {
                         { Name = "Cursed Timber", Icon = "lucide:tree-pine" },
                         { Name = "Lush Dirt", Icon = "lucide:leaf" },
@@ -518,7 +538,8 @@ end
 
 VoidUI:Notify({
     Title = "VoidUI " .. VoidUI.Version,
-    Content = "Hover sidebar icons · drag PriorityList · Popup demo in Settings",
+    Content = "Smooth PriorityList · assets everywhere · prettier Notify — see VoidUI.API.md",
+    Icon = "lucide:bell-ring",
     Duration = 4,
 })
 
