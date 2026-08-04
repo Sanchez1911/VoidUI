@@ -4,18 +4,15 @@
       local VoidUI = loadstring(game:HttpGet(".../VoidUI.lua"))()
 
     API sketch:
-      local W = VoidUI:CreateWindow({
-        Title=..., Icon=..., Accent=...,
-        Transparency=0.16, Bloom=true, Search=true, OpenButton=true,
-        ToggleKey=Enum.KeyCode.G,
-      })
-      S:Button({ Title=..., Icon="lucide:play", Desc=..., Callback=fn }) -- clean row (default)
-      S:Button({ Title=..., Style="Accent", Icon=..., Callback=fn }) -- optional filled CTA
-      W:Search("train") / W:SetTransparency(0.2) / W:Toggle()
+      local W = VoidUI:CreateWindow({ Title=..., Icon=..., Accent=..., Search=true, OpenButton=true })
+      S:Toggle / Slider (editable value) / Dropdown (images+search) / Button / Input / Keybind
+      S:PriorityList({ Values={...}, Callback=fn }) -- drag reorder
+      W:Popup({ Title=..., Size=..., Icon=... }) -- modal settings page
+      Dropdown Values may be strings OR { Name=, Image="rbxassetid://...", Icon="lucide:..." }
 ]]
 
 local VoidUI = {
-    Version = "1.6.7",
+    Version = "1.7.0",
     _windows = {},
 }
 
@@ -60,6 +57,33 @@ local Fonts = {
     Desc = Enum.Font.Gotham,
     Mono = Enum.Font.Code,
 }
+
+-- Dropdown / PriorityList entry helpers (string or { Name, Image, Icon, Id })
+local function entryKey(v)
+    if type(v) == "table" then
+        return tostring(v.Id or v.Name or v.Title or v.Text or v[1] or "?")
+    end
+    return tostring(v)
+end
+local function entryLabel(v)
+    if type(v) == "table" then
+        return tostring(v.Name or v.Title or v.Text or v.Id or "?")
+    end
+    return tostring(v)
+end
+local function entryAsset(v)
+    if type(v) ~= "table" then return nil end
+    local a = v.Image or v.Icon or v.Asset
+    if type(a) == "number" then return "rbxassetid://" .. tostring(a) end
+    return a
+end
+local function entriesEqual(a, b)
+    if a == b then return true end
+    if type(a) == "table" or type(b) == "table" then
+        return entryKey(a) == entryKey(b)
+    end
+    return tostring(a) == tostring(b)
+end
 
 local TI = TweenInfo.new
 local function tween(obj, info, props)
@@ -1407,6 +1431,43 @@ function VoidUI:CreateWindow(cfg)
         iconHolder.AnchorPoint = Vector2.new(0.5, 0.5)
         iconHolder.Position = UDim2.fromScale(0.5, 0.5)
 
+        -- sidebar tooltip (tab name)
+        local tip
+        local function hideTip()
+            if tip then tip:Destroy() tip = nil end
+        end
+        local function showTip()
+            hideTip()
+            local abs = btn.AbsolutePosition
+            local sz = btn.AbsoluteSize
+            local inset = GuiService:GetGuiInset()
+            local x = abs.X + sz.X + 10 + (screen.IgnoreGuiInset and inset.X or 0)
+            local y = abs.Y + sz.Y * 0.5 + (screen.IgnoreGuiInset and inset.Y or 0)
+            tip = mk("Frame", {
+                Name = "TabTip",
+                BackgroundColor3 = Color3.fromRGB(22, 18, 32),
+                BorderSizePixel = 0,
+                AnchorPoint = Vector2.new(0, 0.5),
+                Position = UDim2.fromOffset(x, y),
+                AutomaticSize = Enum.AutomaticSize.XY,
+                ZIndex = 900,
+                Parent = screen,
+            })
+            corner(tip, 8)
+            stroke(tip, accent, 1, 0.55)
+            pad(tip, 6, 10, 6, 10)
+            mk("TextLabel", {
+                BackgroundTransparency = 1,
+                Font = Fonts.Title,
+                TextSize = 12,
+                TextColor3 = T.Text,
+                Text = tabTitle,
+                AutomaticSize = Enum.AutomaticSize.XY,
+                ZIndex = 901,
+                Parent = tip,
+            })
+        end
+
         local pageHost = mk("Frame", {
             Name = "TabHost_" .. tabTitle,
             BackgroundTransparency = 1,
@@ -1443,11 +1504,13 @@ function VoidUI:CreateWindow(cfg)
         end
 
         btn.MouseEnter:Connect(function()
+            showTip()
             if not pageHost.Visible then
                 tween(iconBg, TI(0.12), { BackgroundColor3 = T.BgHover, BackgroundTransparency = 0 })
             end
         end)
         btn.MouseLeave:Connect(function()
+            hideTip()
             if not pageHost.Visible then
                 tween(iconBg, TI(0.12), { BackgroundTransparency = 1 })
                 iconBg.BackgroundColor3 = accent
@@ -1723,7 +1786,7 @@ function VoidUI:CreateWindow(cfg)
                 function Section:Toggle(o)
                     o = o or {}
                     local value = o.Value and true or false
-                    local _, _, right = makeRow(o.Title or "Toggle", o.Desc)
+                    local row, _, right = makeRow(o.Title or "Toggle", o.Desc)
 
                     right.Size = UDim2.fromOffset(48, 28)
                     local track = mk("Frame", {
@@ -1749,15 +1812,27 @@ function VoidUI:CreateWindow(cfg)
 
                     local api = {
                         Value = value,
+                        Row = row,
                         Set = function(self, v, silent)
                             self.Value = v and true or false
-                            tween(track, TI(0.18), { BackgroundColor3 = self.Value and accent or T.BgToggleOff })
-                            tween(knob, TI(0.18, Enum.EasingStyle.Quart), {
-                                Position = self.Value and UDim2.new(1, -25, 0.5, -11) or UDim2.new(0, 3, 0.5, -11),
-                            })
+                            local on = self.Value
+                            local col = on and accent or T.BgToggleOff
+                            local pos = on and UDim2.new(1, -25, 0.5, -11) or UDim2.new(0, 3, 0.5, -11)
+                            -- apply immediately so remote/silent Set never leaves stale visuals
+                            pcall(function()
+                                track.BackgroundColor3 = col
+                                knob.Position = pos
+                            end)
+                            pcall(function()
+                                tween(track, TI(0.18), { BackgroundColor3 = col })
+                                tween(knob, TI(0.18, Enum.EasingStyle.Quart), { Position = pos })
+                            end)
                             if not silent and o.Callback then
                                 task.spawn(o.Callback, self.Value)
                             end
+                        end,
+                        SetVisible = function(self, vis)
+                            if row then row.Visible = vis and true or false end
                         end,
                     }
 
@@ -1805,21 +1880,43 @@ function VoidUI:CreateWindow(cfg)
                         TextColor3 = T.Text,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Text = o.Title or "Slider",
-                        Size = UDim2.new(1, -60, 1, 0),
+                        Size = UDim2.new(1, -78, 1, 0),
                         Parent = top,
                     })
-                    local valLbl = mk("TextLabel", {
-                        BackgroundTransparency = 1,
+                    local function fmt(v)
+                        return (decimals > 0 and string.format("%." .. decimals .. "f", v) or tostring(math.floor(v + 0.5)))
+                    end
+                    local valBox = mk("TextBox", {
+                        BackgroundColor3 = Color3.fromRGB(24, 20, 32),
                         Font = Fonts.Title,
-                        TextSize = 13,
+                        TextSize = 12,
                         TextColor3 = accent,
-                        TextXAlignment = Enum.TextXAlignment.Right,
-                        Text = (decimals > 0 and string.format("%." .. decimals .. "f", value) or tostring(math.floor(value + 0.5))) .. suffix,
+                        Text = fmt(value),
+                        ClearTextOnFocus = false,
+                        TextXAlignment = Enum.TextXAlignment.Center,
                         AnchorPoint = Vector2.new(1, 0.5),
                         Position = UDim2.new(1, 0, 0.5, 0),
-                        Size = UDim2.fromOffset(56, 17),
+                        Size = UDim2.fromOffset(64, 22),
                         Parent = top,
                     })
+                    corner(valBox, 7)
+                    stroke(valBox, Color3.fromRGB(48, 46, 58), 1, 0.5)
+                    if suffix ~= "" then
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Desc,
+                            TextSize = 10,
+                            TextColor3 = T.TextMute,
+                            Text = suffix,
+                            AnchorPoint = Vector2.new(1, 0.5),
+                            Position = UDim2.new(1, -68, 0.5, 0),
+                            Size = UDim2.fromOffset(20, 14),
+                            TextXAlignment = Enum.TextXAlignment.Right,
+                            Parent = top,
+                        })
+                        valBox.Position = UDim2.new(1, 0, 0.5, 0)
+                        valBox.Size = UDim2.fromOffset(52, 22)
+                    end
 
                     if o.Desc and o.Desc ~= "" then
                         mk("TextLabel", {
@@ -1872,6 +1969,15 @@ function VoidUI:CreateWindow(cfg)
                     local sliding = false
                     local api = { Value = value }
 
+                    local function applyVisual(raw)
+                        local p = (raw - min) / math.max(max - min, 1e-6)
+                        fill.Size = UDim2.new(p, 0, 1, 0)
+                        knob.Position = UDim2.new(p, 0, 0.5, 0)
+                        if not valBox:IsFocused() then
+                            valBox.Text = fmt(raw)
+                        end
+                    end
+
                     local function setFromX(x, silent)
                         local rel = math.clamp((x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1), 0, 1)
                         local raw = min + rel * (max - min)
@@ -1882,24 +1988,33 @@ function VoidUI:CreateWindow(cfg)
                             raw = math.floor(raw * m + 0.5) / m
                         end
                         api.Value = raw
-                        local p = (raw - min) / math.max(max - min, 1e-6)
-                        fill.Size = UDim2.new(p, 0, 1, 0)
-                        knob.Position = UDim2.new(p, 0, 0.5, 0)
-                        valLbl.Text = (decimals > 0 and string.format("%." .. decimals .. "f", raw) or tostring(raw)) .. suffix
+                        applyVisual(raw)
                         if not silent and o.Callback then
                             task.spawn(o.Callback, raw)
                         end
                     end
 
                     function api:Set(v, silent)
-                        v = math.clamp(v, min, max)
-                        local p = (v - min) / math.max(max - min, 1e-6)
+                        v = math.clamp(tonumber(v) or min, min, max)
+                        if decimals <= 0 then
+                            v = math.floor(v + 0.5)
+                        else
+                            local m = 10 ^ decimals
+                            v = math.floor(v * m + 0.5) / m
+                        end
                         self.Value = v
-                        fill.Size = UDim2.new(p, 0, 1, 0)
-                        knob.Position = UDim2.new(p, 0, 0.5, 0)
-                        valLbl.Text = (decimals > 0 and string.format("%." .. decimals .. "f", v) or tostring(v)) .. suffix
+                        applyVisual(v)
                         if not silent and o.Callback then task.spawn(o.Callback, v) end
                     end
+
+                    valBox.FocusLost:Connect(function()
+                        local n = tonumber(valBox.Text)
+                        if n then
+                            api:Set(n)
+                        else
+                            valBox.Text = fmt(api.Value)
+                        end
+                    end)
 
                     track.InputBegan:Connect(function(input)
                         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -1964,10 +2079,11 @@ function VoidUI:CreateWindow(cfg)
                         if multi then
                             local n = #current
                             if n == 0 then return o.Placeholder or "Select..." end
-                            if n == 1 then return tostring(current[1]) end
+                            if n == 1 then return entryLabel(current[1]) end
                             return n .. " selected"
                         end
-                        return tostring(current or o.Placeholder or "Select...")
+                        if current == nil then return o.Placeholder or "Select..." end
+                        return entryLabel(current)
                     end
 
                     local txt = mk("TextLabel", {
@@ -1977,11 +2093,27 @@ function VoidUI:CreateWindow(cfg)
                         TextColor3 = T.Text,
                         TextXAlignment = Enum.TextXAlignment.Left,
                         TextTruncate = Enum.TextTruncate.AtEnd,
-                        Text = labelText(),
+                        Text = "",
                         Position = UDim2.fromOffset(14, 0),
                         Size = UDim2.new(1, -36, 1, 0),
                         Parent = box,
                     })
+
+                    local previewIcon
+                    local function refreshPreview()
+                        if previewIcon then previewIcon:Destroy() previewIcon = nil end
+                        local asset = (not multi) and entryAsset(current) or nil
+                        local leftPad = 14
+                        if asset then
+                            previewIcon = makeIcon(box, asset, 16, Color3.new(1, 1, 1), 3)
+                            previewIcon.Position = UDim2.fromOffset(10, 7)
+                            leftPad = 32
+                        end
+                        txt.Position = UDim2.fromOffset(leftPad, 0)
+                        txt.Size = UDim2.new(1, -(leftPad + 22), 1, 0)
+                        txt.Text = labelText()
+                    end
+                    refreshPreview()
                     local chevHolder = makeIcon(box, "lucide:chevron-down", 14, T.TextDim, 2)
                     chevHolder.AnchorPoint = Vector2.new(1, 0.5)
                     chevHolder.Position = UDim2.new(1, -8, 0.5, 0)
@@ -1994,7 +2126,11 @@ function VoidUI:CreateWindow(cfg)
                     local api = {
                         Value = current,
                         Values = values,
+                        Row = row,
                     }
+                    function api:SetVisible(vis)
+                        if row then row.Visible = vis and true or false end
+                    end
 
                     local function closeMenu()
                         open = false
@@ -2010,11 +2146,11 @@ function VoidUI:CreateWindow(cfg)
                     local function isSelected(v)
                         if multi then
                             for _, x in ipairs(current) do
-                                if x == v then return true end
+                                if entriesEqual(x, v) then return true end
                             end
                             return false
                         end
-                        return current == v
+                        return entriesEqual(current, v)
                     end
 
                     local function fire()
@@ -2030,7 +2166,7 @@ function VoidUI:CreateWindow(cfg)
 
                         local abs = box.AbsolutePosition
                         local boxSz = box.AbsoluteSize
-                        local itemH = 30
+                        local itemH = 34
                         local gap = 2
                         local padTop, padBot = 6, 8
                         local searchH = 0
@@ -2097,7 +2233,7 @@ function VoidUI:CreateWindow(cfg)
                             local filtered = {}
                             local q = string.lower(filterQ)
                             for _, v in ipairs(values) do
-                                if q == "" or string.find(string.lower(tostring(v)), q, 1, true) then
+                                if q == "" or string.find(string.lower(entryLabel(v)), q, 1, true) then
                                     filtered[#filtered + 1] = v
                                 end
                             end
@@ -2171,6 +2307,14 @@ function VoidUI:CreateWindow(cfg)
                                 })
                                 corner(mark, 1)
 
+                                local textLeft = 14
+                                local asset = entryAsset(v)
+                                if asset then
+                                    local ic = makeIcon(item, asset, 18, Color3.new(1, 1, 1), 505)
+                                    ic.Position = UDim2.fromOffset(12, 8)
+                                    textLeft = 36
+                                end
+
                                 mk("TextLabel", {
                                     BackgroundTransparency = 1,
                                     Font = selected and Fonts.Title or Fonts.Body,
@@ -2178,9 +2322,9 @@ function VoidUI:CreateWindow(cfg)
                                     TextColor3 = selected and Color3.fromRGB(236, 228, 255) or T.Text,
                                     TextXAlignment = Enum.TextXAlignment.Left,
                                     TextTruncate = Enum.TextTruncate.AtEnd,
-                                    Text = tostring(v),
-                                    Size = UDim2.new(1, -36, 1, 0),
-                                    Position = UDim2.fromOffset(14, 0),
+                                    Text = entryLabel(v),
+                                    Size = UDim2.new(1, -(textLeft + 28), 1, 0),
+                                    Position = UDim2.fromOffset(textLeft, 0),
                                     ZIndex = 505,
                                     Active = false,
                                     Parent = item,
@@ -2207,7 +2351,7 @@ function VoidUI:CreateWindow(cfg)
                                     if multi then
                                         local found
                                         for i, x in ipairs(current) do
-                                            if x == v then found = i break end
+                                            if entriesEqual(x, v) then found = i break end
                                         end
                                         if found then
                                             table.remove(current, found)
@@ -2215,13 +2359,13 @@ function VoidUI:CreateWindow(cfg)
                                             table.insert(current, v)
                                         end
                                         api.Value = current
-                                        txt.Text = labelText()
+                                        refreshPreview()
                                         fire()
                                         rebuildList()
                                     else
                                         current = v
                                         api.Value = current
-                                        txt.Text = labelText()
+                                        refreshPreview()
                                         closeMenu()
                                         fire()
                                     end
@@ -2287,7 +2431,7 @@ function VoidUI:CreateWindow(cfg)
                             current = v
                         end
                         self.Value = current
-                        txt.Text = labelText()
+                        refreshPreview()
                         if not silent then fire() end
                     end
 
@@ -2448,10 +2592,59 @@ function VoidUI:CreateWindow(cfg)
                 -----------------------------------------------------------------
                 function Section:Input(o)
                     o = o or {}
-                    local _, _, right = makeRow(o.Title or "Input", o.Desc)
-                    right.Size = UDim2.fromOffset(128, 30)
-                    local box = mk("TextBox", {
+                    -- stacked full-width so long strings (URLs) don't blow the layout
+                    addDivider()
+                    rowOrder = rowOrder + 1
+                    local row = mk("Frame", {
+                        BackgroundTransparency = 1,
+                        Size = UDim2.new(1, 0, 0, 0),
+                        AutomaticSize = Enum.AutomaticSize.Y,
+                        LayoutOrder = rowOrder,
+                        Parent = card,
+                    })
+                    pad(row, 8, 8, 8, 10)
+                    list(row, Enum.FillDirection.Vertical, 6)
+                    registerSearch(row, o.Title or "Input", o.Desc)
+
+                    mk("TextLabel", {
+                        BackgroundTransparency = 1,
+                        Font = Fonts.Title,
+                        TextSize = 14,
+                        TextColor3 = T.Text,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        Text = o.Title or "Input",
+                        Size = UDim2.new(1, 0, 0, 17),
+                        LayoutOrder = 1,
+                        Parent = row,
+                    })
+                    if o.Desc and o.Desc ~= "" then
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Desc,
+                            TextSize = 12,
+                            TextColor3 = Color3.fromRGB(198, 188, 220),
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextWrapped = true,
+                            Text = o.Desc,
+                            Size = UDim2.new(1, 0, 0, 0),
+                            AutomaticSize = Enum.AutomaticSize.Y,
+                            LayoutOrder = 2,
+                            Parent = row,
+                        })
+                    end
+
+                    local boxHost = mk("Frame", {
                         BackgroundColor3 = T.BgInput,
+                        Size = UDim2.new(1, 0, 0, 34),
+                        ClipsDescendants = true,
+                        LayoutOrder = 3,
+                        Parent = row,
+                    })
+                    corner(boxHost, 10)
+                    stroke(boxHost, Color3.fromRGB(48, 46, 58), 1, 0.5)
+
+                    local box = mk("TextBox", {
+                        BackgroundTransparency = 1,
                         Font = Fonts.Body,
                         TextSize = 12,
                         TextColor3 = T.Text,
@@ -2459,14 +2652,13 @@ function VoidUI:CreateWindow(cfg)
                         PlaceholderColor3 = T.TextMute,
                         Text = o.Value and tostring(o.Value) or "",
                         ClearTextOnFocus = false,
+                        TextXAlignment = Enum.TextXAlignment.Left,
                         Size = UDim2.fromScale(1, 1),
-                        Parent = right,
+                        Parent = boxHost,
                     })
-                    corner(box, 12)
-                    stroke(box, T.Stroke, 1, 0.4)
-                    pad(box, 0, 8, 0, 8)
+                    pad(box, 0, 10, 0, 10)
 
-                    local api = { Value = box.Text }
+                    local api = { Value = box.Text, Row = row }
                     box.FocusLost:Connect(function(enter)
                         api.Value = box.Text
                         if o.Callback then task.spawn(o.Callback, box.Text, enter) end
@@ -2475,6 +2667,9 @@ function VoidUI:CreateWindow(cfg)
                         box.Text = tostring(v or "")
                         self.Value = box.Text
                         if not silent and o.Callback then task.spawn(o.Callback, box.Text, false) end
+                    end
+                    function api:SetVisible(vis)
+                        row.Visible = vis and true or false
                     end
                     if o.Flag then Window._flags[o.Flag] = api end
                     return api
@@ -2617,6 +2812,175 @@ function VoidUI:CreateWindow(cfg)
                     })
                 end
 
+                -----------------------------------------------------------------
+                -- PriorityList — drag-reorder list (hold & drag)
+                -----------------------------------------------------------------
+                function Section:PriorityList(o)
+                    o = o or {}
+                    local items = {}
+                    for i, v in ipairs(o.Values or {}) do
+                        items[i] = v
+                    end
+
+                    addDivider()
+                    rowOrder = rowOrder + 1
+                    local wrap = mk("Frame", {
+                        BackgroundTransparency = 1,
+                        Size = UDim2.new(1, 0, 0, 0),
+                        AutomaticSize = Enum.AutomaticSize.Y,
+                        LayoutOrder = rowOrder,
+                        Parent = card,
+                    })
+                    pad(wrap, 8, 8, 10, 10)
+                    list(wrap, Enum.FillDirection.Vertical, 6)
+                    registerSearch(wrap, o.Title or "Priority", o.Desc)
+
+                    if o.Title then
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Title,
+                            TextSize = 14,
+                            TextColor3 = T.Text,
+                            Text = o.Title,
+                            Size = UDim2.new(1, 0, 0, 17),
+                            Parent = wrap,
+                        })
+                    end
+                    if o.Desc and o.Desc ~= "" then
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Desc,
+                            TextSize = 12,
+                            TextColor3 = T.TextMute,
+                            TextWrapped = true,
+                            Text = o.Desc,
+                            Size = UDim2.new(1, 0, 0, 0),
+                            AutomaticSize = Enum.AutomaticSize.Y,
+                            Parent = wrap,
+                        })
+                    end
+
+                    local listFrame = mk("Frame", {
+                        BackgroundTransparency = 1,
+                        Size = UDim2.new(1, 0, 0, 0),
+                        AutomaticSize = Enum.AutomaticSize.Y,
+                        Parent = wrap,
+                    })
+                    local layout = list(listFrame, Enum.FillDirection.Vertical, 4)
+
+                    local api = { Values = items }
+                    local rowFrames = {}
+                    local dragState = { active = false, from = 0, startY = 0, startIdx = 0 }
+
+                    local function fire()
+                        if o.Callback then task.spawn(o.Callback, items) end
+                    end
+
+                    local function rebuild()
+                        for _, r in ipairs(rowFrames) do
+                            if r and r.Parent then r:Destroy() end
+                        end
+                        for i = #rowFrames, 1, -1 do rowFrames[i] = nil end
+                        for i, v in ipairs(items) do
+                            local idx = i
+                            local r = mk("TextButton", {
+                                BackgroundColor3 = Color3.fromRGB(26, 22, 36),
+                                AutoButtonColor = false,
+                                Text = "",
+                                Size = UDim2.new(1, 0, 0, 40),
+                                LayoutOrder = i,
+                                Parent = listFrame,
+                            })
+                            corner(r, 10)
+                            stroke(r, Color3.fromRGB(48, 46, 58), 1, 0.55)
+                            rowFrames[i] = r
+
+                            local grip = makeIcon(r, "lucide:grip-vertical", 14, T.TextMute, 2)
+                            grip.Position = UDim2.fromOffset(8, 13)
+
+                            local left = 28
+                            local asset = entryAsset(v)
+                            if asset then
+                                local ic = makeIcon(r, asset, 20, Color3.new(1, 1, 1), 2)
+                                ic.Position = UDim2.fromOffset(28, 10)
+                                left = 54
+                            end
+
+                            mk("TextLabel", {
+                                BackgroundTransparency = 1,
+                                Font = Fonts.Title,
+                                TextSize = 12,
+                                TextColor3 = accent,
+                                Text = "#" .. i,
+                                Position = UDim2.fromOffset(left, 11),
+                                Size = UDim2.fromOffset(28, 18),
+                                Parent = r,
+                            })
+                            mk("TextLabel", {
+                                BackgroundTransparency = 1,
+                                Font = Fonts.Body,
+                                TextSize = 13,
+                                TextColor3 = T.Text,
+                                TextXAlignment = Enum.TextXAlignment.Left,
+                                TextTruncate = Enum.TextTruncate.AtEnd,
+                                Text = entryLabel(v),
+                                Position = UDim2.fromOffset(left + 30, 10),
+                                Size = UDim2.new(1, -(left + 44), 0, 20),
+                                Parent = r,
+                            })
+
+                            r.InputBegan:Connect(function(input)
+                                if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+                                dragState.active = true
+                                dragState.from = idx
+                                dragState.startIdx = idx
+                                dragState.startY = input.Position.Y
+                                tween(r, TI(0.1), { BackgroundColor3 = Color3.fromRGB(40, 30, 60) })
+                            end)
+                        end
+                        api.Values = items
+                    end
+
+                    UserInputService.InputChanged:Connect(function(input)
+                        if not dragState.active then return end
+                        if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+                        local dy = input.Position.Y - dragState.startY
+                        local step = 44
+                        local shift = math.floor((dy / step) + (dy >= 0 and 0.5 or -0.5))
+                        local newIdx = math.clamp(dragState.startIdx + shift, 1, #items)
+                        if newIdx ~= dragState.from then
+                            local item = table.remove(items, dragState.from)
+                            table.insert(items, newIdx, item)
+                            dragState.from = newIdx
+                            dragState.startIdx = newIdx
+                            dragState.startY = input.Position.Y
+                            rebuild()
+                        end
+                    end)
+                    UserInputService.InputEnded:Connect(function(input)
+                        if not dragState.active then return end
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                            dragState.active = false
+                            rebuild()
+                            fire()
+                        end
+                    end)
+
+                    function api:Set(listVals, silent)
+                        items = {}
+                        for i, v in ipairs(listVals or {}) do items[i] = v end
+                        rebuild()
+                        if not silent then fire() end
+                    end
+                    function api:Get()
+                        return items
+                    end
+
+                    rebuild()
+                    if o.Flag then Window._flags[o.Flag] = api end
+                    return api
+                end
+
                 return Section
             end
 
@@ -2712,6 +3076,147 @@ function VoidUI:CreateWindow(cfg)
             end
         end
         return true
+    end
+
+    ---------------------------------------------------------------------------
+    -- Popup / Modal (settings-style floating page)
+    ---------------------------------------------------------------------------
+    function Window:Popup(opts)
+        opts = opts or {}
+        local pTitle = opts.Title or "Settings"
+        local pIcon = opts.Icon or "lucide:settings"
+        local pSize = opts.Size or UDim2.fromOffset(420, 480)
+
+        local overlay = mk("TextButton", {
+            Name = "PopupOverlay",
+            BackgroundColor3 = Color3.new(0, 0, 0),
+            BackgroundTransparency = 0.45,
+            Text = "",
+            AutoButtonColor = false,
+            Size = UDim2.fromScale(1, 1),
+            ZIndex = 700,
+            Parent = screen,
+        })
+
+        local panel = mk("Frame", {
+            Name = "Popup",
+            BackgroundColor3 = T.BgPanel,
+            BackgroundTransparency = math.clamp(glass * 0.5, 0.02, 0.2),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5),
+            Size = pSize,
+            ZIndex = 710,
+            Parent = screen,
+        })
+        corner(panel, 18)
+        stroke(panel, Color3.fromRGB(48, 46, 58), 1, 0.45)
+
+        local header = mk("Frame", {
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 48),
+            ZIndex = 711,
+            Parent = panel,
+        })
+        pad(header, 0, 14, 0, 14)
+        local ih = makeIcon(header, pIcon, 18, accent, 712)
+        ih.Position = UDim2.fromOffset(0, 15)
+        mk("TextLabel", {
+            BackgroundTransparency = 1,
+            Font = Fonts.Title,
+            TextSize = 16,
+            TextColor3 = T.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            Text = pTitle,
+            Position = UDim2.fromOffset(28, 14),
+            Size = UDim2.new(1, -70, 0, 22),
+            ZIndex = 712,
+            Parent = header,
+        })
+        local closeBtn = mk("TextButton", {
+            BackgroundColor3 = T.BgInput,
+            AutoButtonColor = false,
+            Text = "",
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, 0, 0.5, 0),
+            Size = UDim2.fromOffset(30, 30),
+            ZIndex = 712,
+            Parent = header,
+        })
+        corner(closeBtn, 10)
+        local cx = makeIcon(closeBtn, "lucide:x", 14, T.TextDim, 713)
+        cx.AnchorPoint = Vector2.new(0.5, 0.5)
+        cx.Position = UDim2.fromScale(0.5, 0.5)
+
+        mk("Frame", {
+            BackgroundColor3 = T.Stroke,
+            BackgroundTransparency = 0.55,
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 14, 0, 48),
+            Size = UDim2.new(1, -28, 0, 1),
+            ZIndex = 711,
+            Parent = panel,
+        })
+
+        local body = mk("ScrollingFrame", {
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Position = UDim2.fromOffset(0, 52),
+            Size = UDim2.new(1, 0, 1, -60),
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = accent,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ZIndex = 711,
+            Parent = panel,
+        })
+        pad(body, 12, 14, 18, 14)
+        list(body, Enum.FillDirection.Vertical, 14)
+
+        local Popup = {
+            Title = pTitle,
+            Frame = panel,
+            Body = body,
+            _closed = false,
+        }
+
+        local function destroy()
+            if Popup._closed then return end
+            Popup._closed = true
+            overlay:Destroy()
+            panel:Destroy()
+            if opts.OnClose then task.spawn(opts.OnClose) end
+        end
+        Popup.Close = destroy
+        Popup.Destroy = destroy
+        closeBtn.MouseButton1Click:Connect(destroy)
+        if opts.CloseOnOverlay ~= false then
+            overlay.MouseButton1Click:Connect(destroy)
+        end
+
+        -- Reuse Page:Section builder by creating a fake page context
+        -- Minimal section factory for popup body
+        function Popup:Section(sopts)
+            sopts = sopts or {}
+            local secTitle = sopts.Title or "SECTION"
+            local hostTab = Window._activeTab or Window._tabs[1]
+            if not hostTab then
+                return nil
+            end
+            if #hostTab._pages == 0 then
+                hostTab:Page({ Title = "_popup" })
+            end
+            local phantom = hostTab._pages[1]
+            local real = phantom:Section({ Title = secTitle, Column = 1 })
+            if real and real.Frame and real.Frame.Parent then
+                local secWrap = real.Frame.Parent
+                if secWrap and secWrap:IsA("GuiObject") then
+                    secWrap.Parent = body
+                end
+            end
+            return real
+        end
+
+        return Popup
     end
 
     table.insert(VoidUI._windows, Window)

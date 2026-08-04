@@ -423,10 +423,103 @@ do
     })
 end
 
+do
+    local demo = Settings:Section({ Title = "NEW · v1.7" })
+    demo:Paragraph({
+        Title = "What's new",
+        Content = "Tab tooltips · editable slider · full-width input · dropdown images · PriorityList drag · Popup modal",
+    })
+    demo:Slider({
+        Title = "Editable Scale",
+        Desc = "Type a number in the box or drag",
+        Min = 0.25,
+        Max = 3,
+        Value = 1,
+        Decimals = 2,
+        Suffix = "x",
+        Flag = "editScale",
+    })
+    demo:Input({
+        Title = "Webhook URL",
+        Desc = "Long text stays inside the field now",
+        Placeholder = "https://discord.com/api/webhooks/...",
+        Value = "https://discord.com/api/webhooks/1234567890/abcdefghijklmnopqrstuvwxyz",
+        Flag = "demoWebhook",
+    })
+    demo:Dropdown({
+        Title = "Unit (with icons)",
+        Desc = "Values can be { Name, Image/Icon }",
+        Values = {
+            { Name = "Luffy", Icon = "lucide:swords" },
+            { Name = "Zoro", Icon = "lucide:sword" },
+            { Name = "Nami", Icon = "lucide:sparkles" },
+            { Name = "Sanji", Icon = "lucide:flame" },
+        },
+        Value = { Name = "Luffy", Icon = "lucide:swords" },
+        Search = true,
+        Flag = "demoUnit",
+    })
+    demo:PriorityList({
+        Title = "Farm Priority",
+        Desc = "Hold & drag rows to reorder",
+        Values = {
+            { Name = "Boss", Icon = "lucide:skull" },
+            { Name = "Quest", Icon = "lucide:scroll-text" },
+            { Name = "Train", Icon = "lucide:dumbbell" },
+            { Name = "Chest", Icon = "lucide:gem" },
+        },
+        Flag = "demoPrio",
+        Callback = function(list)
+            local names = {}
+            for i, v in ipairs(list) do
+                names[i] = (type(v) == "table" and v.Name) or tostring(v)
+            end
+            print("priority:", table.concat(names, " > "))
+        end,
+    })
+    demo:Button({
+        Title = "Open Popup Settings",
+        Icon = "lucide:panel-top",
+        Desc = "Modal page like Expedition goals",
+        Callback = function()
+            local pop = Window:Popup({
+                Title = "Expedition Goals",
+                Icon = "lucide:settings",
+                Size = UDim2.fromOffset(400, 460),
+            })
+            local s = pop:Section({ Title = "STOP WHEN" })
+            if s then
+                s:Dropdown({
+                    Title = "Mode",
+                    Values = { "Forever", "Until Done", "Until Goals", "After N Runs", "After N Minutes" },
+                    Value = "Until Goals",
+                })
+                s:Toggle({ Title = "Match All Goals", Value = true })
+                s:PriorityList({
+                    Title = "Goals",
+                    Desc = "Drag to set priority",
+                    Values = {
+                        { Name = "Cursed Timber", Icon = "lucide:tree-pine" },
+                        { Name = "Lush Dirt", Icon = "lucide:leaf" },
+                        { Name = "Aqua Shard", Icon = "lucide:droplet" },
+                    },
+                })
+                s:Button({
+                    Title = "Close",
+                    Icon = "lucide:check",
+                    Callback = function()
+                        pop:Close()
+                    end,
+                })
+            end
+        end,
+    })
+end
+
 VoidUI:Notify({
     Title = "VoidUI " .. VoidUI.Version,
-    Content = "Search · G = toggle · float icon on mobile",
+    Content = "Hover sidebar icons · drag PriorityList · Popup demo in Settings",
     Duration = 4,
 })
 
-print("[VoidUI] demo loaded")
+print("[VoidUI] demo loaded", VoidUI.Version)
