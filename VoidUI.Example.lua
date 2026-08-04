@@ -326,7 +326,6 @@ do
             VoidUI:Notify({
                 Title = "Priority Farm",
                 Content = v and "Enabled" or "Disabled",
-                Icon = v and "lucide:check" or "lucide:pause",
                 Duration = 2,
             })
         end,
@@ -352,7 +351,6 @@ Window:Tab({ Title = "Inventory", Icon = "lucide:backpack" })
             VoidUI:Notify({
                 Title = "VoidUI",
                 Content = "Library ready",
-                Icon = "lucide:sparkles",
                 Duration = 3,
             })
 
@@ -441,7 +439,7 @@ do
     demo:Paragraph({
         Title = "What's new",
         Icon = "lucide:info",
-        Content = "Smooth PriorityList ghost-drag · Icon/Image ทุก Section/แถว · Notify icon+timer · see CHANGELOG.md / VoidUI.API.md",
+        Content = "Smooth PriorityList ghost-drag · Icon/Image ทุก Section/แถว · hard Notify toast · see CHANGELOG.md / VoidUI.API.md",
     })
     demo:Slider({
         Title = "Editable Scale",
@@ -538,9 +536,8 @@ end
 
 VoidUI:Notify({
     Title = "VoidUI " .. VoidUI.Version,
-    Content = "Smooth PriorityList · assets everywhere · prettier Notify — see VoidUI.API.md",
-    Icon = "lucide:bell-ring",
-    Duration = 4,
+    Content = "Drag sticks to cursor · hard toast Notify",
+    Duration = 3.5,
 })
 
 print("[VoidUI] demo loaded", VoidUI.Version)

@@ -1,64 +1,36 @@
 # VoidUI Changelog
 
+## 1.7.2 — Drag stick + hard Notify
+
+### PriorityList drag
+- Ghost ติดจุดที่กดค้างแล้ว (sticky offset) — แก้สูตรหักครึ่งสูงซ้ำ + หัก GuiInset ผิดตอน `IgnoreGuiInset`
+- ตามเมาส์ด้วย `GetMouseLocation` ตอน MouseMovement
+- แถวแน่นขึ้น · ไอคอนเปล่าไม่มี chip ม่วง
+
+### Notify (ตึง / ไม่ AI)
+- ไม่มี icon chip / accent wash / sparkle default
+- เส้นม่วงซ้าย 2px + ข้อความแน่น · มุม 8px · stroke เทา
+- Timer 1px ด้านล่าง · `Icon` ใส่เมื่อต้องการเท่านั้น
+
+---
+
 ## 1.7.1 — PriorityList / Assets / Notify
 
 ### PriorityList (drag)
-- ไม่ rebuild ทั้ง list ตอนลากแล้ว (อันนี้ทำให้กัง)
-- Ghost ลอยตามเมาส์ + แถวต้นทางจาง + highlight ช่องปลายทาง
-- สลับด้วย `LayoutOrder` + array swap ตามตำแหน่ง Y จริง
-- แถวสวยขึ้น: grip, icon chip, accent bar, `#N` อัปเดตสด
+- ไม่ rebuild ทั้ง list ตอนลาก — ghost + LayoutOrder swap
+- Assets ทุกจุด (`Icon` / `Image` / rbxassetid / lucide)
+- Helper: `VoidUI.NormalizeAsset(x)`
 
-### Assets ทุกจุด
-รับได้ทั้ง `"rbxassetid://N"` / `number` / `"lucide:name"` ผ่าน `Icon` หรือ `Image`:
-
-| ที่ | ฟิลด์ |
-|---|---|
-| Window / Tab / Popup | `Icon` |
-| Section header | `Icon` / `Image` |
-| Toggle / Dropdown / Keybind / Slider / Input / Paragraph | `Icon` / `Image` |
-| Button (ไอคอนซ้ายหัวข้อ) | `LeadingIcon` / `LeadingImage` |
-| Button (ไอคอนขวา / CTA) | `Icon` (เหมือนเดิม) |
-| Dropdown / PriorityList values | `{ Name=, Icon= }` หรือ `{ Image= }` |
-| Notify | `Icon` |
-
-Helper: `VoidUI.NormalizeAsset(x)`
-
-### Notify
-- การ์ด glass + accent wash + icon chip
-- Slide-in จากขวา + timer bar ด้านล่าง
-- `VoidUI:Notify({ Title, Content, Icon, Duration, Accent })`
+### Notify (1.7.1)
+- การ์ด glass + icon chip (แทนที่ด้วย hard toast ใน 1.7.2)
 
 ---
 
 ## 1.7.0
 
-- Sidebar tab tooltips
-- Slider แก้ค่าผ่าน TextBox
-- Input เต็มความกว้าง (URL ยาวไม่พัง)
-- Dropdown: สูงสูงสุด + scrollbar + search ในเมนู + ค่าเป็น `{ Name, Image/Icon }`
-- PriorityList ตัวแรก (drag แบบ rebuild — แทนที่ใน 1.7.1)
-- `Window:Popup` modal
+- Sidebar tab tooltips · editable slider · full-width input
+- Dropdown images + search · PriorityList · Popup modal
 
-## 1.6.x (สรุปสั้น)
+## Cache note
 
-- Glass + header bloom (ไม่ bloom กรอบนอก)
-- Search expandable → dropdown ผลลัพธ์ + flash แถว
-- Subtabs โผล่รอบแรก (defer SelectTab)
-- Button style `Clean` (ทั้งแถวคลิกได้)
-- OpenButton ลอย (มือถือ)
-- Fix blank UI (`CanvasGroup` → `Frame`), bloomLabel-before-mk, HttpGet cache → **pin SHA**
-
----
-
-## Cache note (สำคัญ)
-
-Executor หลายตัว cache `HttpGet` แรง — โหลดด้วย **commit SHA** เสมอ:
-
-```lua
-local SHA = "xxxxxxxx" -- จาก github.com/Sanchez1911/VoidUI
-loadstring(game:HttpGet(
-  "https://raw.githubusercontent.com/Sanchez1911/VoidUI/" .. SHA .. "/VoidUI.lua"
-))()
-```
-
-หรืออ่านไฟล์ local `GUI/VoidUI.lua` ตอนพัฒนา
+Pin commit SHA ใน `HttpGet` เสมอ — executor cache แรง

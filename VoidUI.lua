@@ -15,7 +15,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.7.1",
+    Version = "1.7.2",
     _windows = {},
 }
 
@@ -430,128 +430,118 @@ local function ensureNotifHost()
     sg.ResetOnSpawn = false
     sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     sg.DisplayOrder = 9999
+    sg.IgnoreGuiInset = true
     protect(sg)
     notifHost = mk("Frame", {
         Name = "Host",
         BackgroundTransparency = 1,
         AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -16, 0, 16),
-        Size = UDim2.fromOffset(320, 600),
+        Position = UDim2.new(1, -18, 0, 18),
+        Size = UDim2.fromOffset(280, 640),
         Parent = sg,
     })
-    list(notifHost, Enum.FillDirection.Vertical, 10, Enum.HorizontalAlignment.Right)
+    list(notifHost, Enum.FillDirection.Vertical, 8, Enum.HorizontalAlignment.Right)
     return notifHost
 end
 
+-- Hard toast: left tick + title/body, no AI chip/wash. Icon only if passed.
 function VoidUI:Notify(opts)
     opts = opts or {}
     local host = ensureNotifHost()
-    local duration = opts.Duration or 3.5
+    local duration = opts.Duration or 3.2
     local accent = opts.Accent or Theme.Accent
-    local iconName = opts.Icon or "lucide:bell"
+    local iconName = opts.Icon -- nil = no icon (cleaner)
 
     local card = mk("Frame", {
-        BackgroundColor3 = Color3.fromRGB(16, 14, 24),
-        Size = UDim2.fromOffset(310, 0),
+        BackgroundColor3 = Color3.fromRGB(12, 10, 16),
+        BackgroundTransparency = 0.06,
+        Size = UDim2.fromOffset(268, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         ClipsDescendants = true,
         Parent = host,
     })
-    corner(card, 14)
-    stroke(card, accent, 1.2, 0.55)
-    pad(card, 12, 14, 14, 14)
+    corner(card, 8)
+    stroke(card, Color3.fromRGB(40, 38, 50), 1, 0.35)
+    pad(card, 10, 12, 11, 12)
 
-    -- soft accent wash
-    mk("Frame", {
+    local tick = mk("Frame", {
         BackgroundColor3 = accent,
-        BackgroundTransparency = 0.92,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 28, 1, 28),
-        Position = UDim2.fromOffset(-14, -14),
-        ZIndex = 0,
+        Size = UDim2.new(0, 2, 1, 6),
+        Position = UDim2.fromOffset(-12, -3),
+        ZIndex = 3,
         Parent = card,
     })
+    corner(tick, 1)
 
-    local bar = mk("Frame", {
-        BackgroundColor3 = accent,
-        Size = UDim2.new(0, 3, 1, 8),
-        Position = UDim2.fromOffset(-14, -4),
-        BorderSizePixel = 0,
-        ZIndex = 2,
-        Parent = card,
-    })
-    corner(bar, 2)
+    local textLeft = 0
+    if iconName then
+        local ih = makeIcon(card, iconName, 14, Theme.TextDim, 3)
+        ih.Position = UDim2.fromOffset(0, 1)
+        textLeft = 22
+    end
 
-    local iconChip = mk("Frame", {
-        BackgroundColor3 = accent,
-        BackgroundTransparency = 0.82,
-        Size = UDim2.fromOffset(32, 32),
-        Position = UDim2.fromOffset(0, 0),
-        ZIndex = 2,
-        Parent = card,
-    })
-    corner(iconChip, 10)
-    local ih = makeIcon(iconChip, iconName, 16, accent, 3)
-    ih.AnchorPoint = Vector2.new(0.5, 0.5)
-    ih.Position = UDim2.fromScale(0.5, 0.5)
-
-    mk("TextLabel", {
+    local title = mk("TextLabel", {
         BackgroundTransparency = 1,
         Font = Fonts.Title,
-        TextSize = 14,
+        TextSize = 13,
         TextColor3 = Theme.Text,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
         Text = opts.Title or "Notification",
-        Size = UDim2.new(1, -44, 0, 18),
-        Position = UDim2.fromOffset(40, 1),
+        Size = UDim2.new(1, -textLeft, 0, 16),
+        Position = UDim2.fromOffset(textLeft, 0),
         ZIndex = 2,
         Parent = card,
     })
 
-    local contentH = 0
     if opts.Content and opts.Content ~= "" then
-        local body = mk("TextLabel", {
+        mk("TextLabel", {
             BackgroundTransparency = 1,
             Font = Fonts.Desc,
-            TextSize = 12,
-            TextColor3 = Theme.TextDim,
+            TextSize = 11,
+            TextColor3 = Theme.TextMute,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextYAlignment = Enum.TextYAlignment.Top,
             TextWrapped = true,
             Text = opts.Content,
-            Size = UDim2.new(1, -44, 0, 0),
+            Size = UDim2.new(1, -textLeft, 0, 0),
             AutomaticSize = Enum.AutomaticSize.Y,
-            Position = UDim2.fromOffset(40, 22),
+            Position = UDim2.fromOffset(textLeft, 17),
             ZIndex = 2,
             Parent = card,
         })
-        contentH = 8
     end
 
-    local timer = mk("Frame", {
-        BackgroundColor3 = accent,
+    local timerTrack = mk("Frame", {
+        BackgroundColor3 = Color3.fromRGB(32, 28, 42),
         BorderSizePixel = 0,
         AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.new(0, -14, 1, 14),
-        Size = UDim2.new(1, 28, 0, 2),
+        Position = UDim2.new(0, -12, 1, 11),
+        Size = UDim2.new(1, 24, 0, 1),
         ZIndex = 3,
         Parent = card,
     })
-
-    card.Position = UDim2.new(0, 40, 0, 0)
-    card.BackgroundTransparency = 1
-    tween(card, TI(0.35, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-        BackgroundTransparency = 0.08,
-        Position = UDim2.new(0, 0, 0, 0),
+    local timer = mk("Frame", {
+        BackgroundColor3 = accent,
+        BorderSizePixel = 0,
+        Size = UDim2.fromScale(1, 1),
+        Parent = timerTrack,
     })
-    tween(timer, TI(duration, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 0, 2) })
+
+    card.Position = UDim2.fromOffset(24, 0)
+    card.BackgroundTransparency = 1
+    tween(card, TI(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+        BackgroundTransparency = 0.06,
+        Position = UDim2.fromOffset(0, 0),
+    })
+    tween(timer, TI(duration, Enum.EasingStyle.Linear), { Size = UDim2.new(0, 0, 1, 0) })
 
     task.delay(duration, function()
         if not card.Parent then return end
-        local tw = tween(card, TI(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {
+        local tw = tween(card, TI(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
             BackgroundTransparency = 1,
-            Position = UDim2.new(0, 36, 0, 0),
+            Position = UDim2.fromOffset(18, 0),
         })
         tw.Completed:Wait()
         card:Destroy()
@@ -2939,8 +2929,8 @@ function VoidUI:CreateWindow(cfg)
                         items[i] = v
                     end
 
-                    local ROW_H = 46
-                    local ROW_GAP = 6
+                    local ROW_H = 42
+                    local ROW_GAP = 5
 
                     addDivider()
                     rowOrder = rowOrder + 1
@@ -3086,21 +3076,20 @@ function VoidUI:CreateWindow(cfg)
                         local src = rowFrames[idx]
                         drag.active = true
                         drag.idx = idx
-                        drag.grabDY = input.Position.Y - (src.AbsolutePosition.Y + src.AbsoluteSize.Y * 0.5)
+                        -- sticky grab: offset จากมุมบนซ้ายแถว → เมาส์ (ไม่หักครึ่งสูงซ้ำ)
+                        drag.grabOX = input.Position.X - src.AbsolutePosition.X
+                        drag.grabOY = input.Position.Y - src.AbsolutePosition.Y
 
-                        src.BackgroundTransparency = 0.45
-                        local sc = Instance.new("UIScale")
-                        sc.Name = "DragScale"
-                        sc.Scale = 0.98
-                        sc.Parent = src
+                        src.BackgroundTransparency = 0.55
 
                         local sg = listFrame:FindFirstAncestorOfClass("ScreenGui")
                         local ghostParent = sg or listFrame
                         local g = src:Clone()
                         g.Name = "VoidDragGhost"
-                        g.BackgroundTransparency = 0.08
-                        g.BackgroundColor3 = Color3.fromRGB(52, 38, 82)
+                        g.BackgroundTransparency = 0.05
+                        g.BackgroundColor3 = Color3.fromRGB(40, 30, 58)
                         g.Size = UDim2.fromOffset(src.AbsoluteSize.X, src.AbsoluteSize.Y)
+                        g.AnchorPoint = Vector2.new(0, 0)
                         g.Parent = ghostParent
                         for _, d in ipairs(g:GetDescendants()) do
                             if d:IsA("GuiObject") then
@@ -3111,27 +3100,30 @@ function VoidUI:CreateWindow(cfg)
                         local gst = g:FindFirstChildOfClass("UIStroke")
                         if gst then
                             gst.Color = accent
-                            gst.Transparency = 0.1
-                            gst.Thickness = 1.5
+                            gst.Transparency = 0.2
+                            gst.Thickness = 1.25
                         end
                         local gsc = g:FindFirstChild("DragScale")
                         if gsc then gsc:Destroy() end
-                        local scale = Instance.new("UIScale")
-                        scale.Scale = 1.04
-                        scale.Parent = g
                         drag.ghost = g
 
-                        local inset = GuiService:GetGuiInset()
+                        local function screenToParent(sx, sy)
+                            if ghostParent:IsA("ScreenGui") then
+                                -- AbsolutePosition == ScreenGui coords เมื่อ IgnoreGuiInset
+                                if ghostParent.IgnoreGuiInset then
+                                    return sx, sy
+                                end
+                                local inset = GuiService:GetGuiInset()
+                                return sx - inset.X, sy - inset.Y
+                            end
+                            local p = ghostParent.AbsolutePosition
+                            return sx - p.X, sy - p.Y
+                        end
+
                         local function setGhostPos(pos)
                             if not drag.ghost then return end
-                            local y = pos.Y - drag.grabDY - src.AbsoluteSize.Y * 0.5
-                            local x = src.AbsolutePosition.X
-                            if ghostParent:IsA("ScreenGui") then
-                                drag.ghost.Position = UDim2.fromOffset(x - inset.X, y - inset.Y)
-                            else
-                                local p = ghostParent.AbsolutePosition
-                                drag.ghost.Position = UDim2.fromOffset(x - p.X, y - p.Y)
-                            end
+                            local px, py = screenToParent(pos.X - drag.grabOX, pos.Y - drag.grabOY)
+                            drag.ghost.Position = UDim2.fromOffset(px, py)
                         end
                         setGhostPos(input.Position)
                         drag._setGhostPos = setGhostPos
@@ -3140,8 +3132,14 @@ function VoidUI:CreateWindow(cfg)
 
                     local function onDragMove(input)
                         if not drag.active then return end
-                        if drag._setGhostPos then drag._setGhostPos(input.Position) end
-                        local target = indexAtY(input.Position.Y)
+                        -- GetMouseLocation นิ่งกว่า Input.Position บนบาง executor
+                        local pos = input.Position
+                        if input.UserInputType == Enum.UserInputType.MouseMovement then
+                            local m = UserInputService:GetMouseLocation()
+                            pos = Vector3.new(m.X, m.Y, 0)
+                        end
+                        if drag._setGhostPos then drag._setGhostPos(pos) end
+                        local target = indexAtY(pos.Y)
                         if target ~= drag.idx then
                             moveItem(drag.idx, target)
                             drag.idx = target
@@ -3165,8 +3163,8 @@ function VoidUI:CreateWindow(cfg)
                                 LayoutOrder = i,
                                 Parent = listFrame,
                             })
-                            corner(r, 12)
-                            stroke(r, Color3.fromRGB(48, 46, 58), 1, 0.55)
+                            corner(r, 10)
+                            stroke(r, Color3.fromRGB(44, 42, 54), 1, 0.5)
                             rowFrames[i] = r
 
                             -- left accent chip
@@ -3188,20 +3186,10 @@ function VoidUI:CreateWindow(cfg)
                             local left = 32
                             local asset = entryAsset(v) or normalizeAsset(type(v) == "table" and (v.Image or v.Icon))
                             if asset then
-                                local icHold = mk("Frame", {
-                                    BackgroundColor3 = accent,
-                                    BackgroundTransparency = 0.88,
-                                    Size = UDim2.fromOffset(28, 28),
-                                    AnchorPoint = Vector2.new(0, 0.5),
-                                    Position = UDim2.new(0, 30, 0.5, 0),
-                                    ZIndex = 2,
-                                    Parent = r,
-                                })
-                                corner(icHold, 8)
-                                local ic = makeIcon(icHold, asset, 18, Color3.new(1, 1, 1), 3)
-                                ic.AnchorPoint = Vector2.new(0.5, 0.5)
-                                ic.Position = UDim2.fromScale(0.5, 0.5)
-                                left = 66
+                                local ic = makeIcon(r, asset, 18, Color3.new(1, 1, 1), 2)
+                                ic.AnchorPoint = Vector2.new(0, 0.5)
+                                ic.Position = UDim2.new(0, 30, 0.5, 0)
+                                left = 56
                             end
 
                             mk("TextLabel", {
