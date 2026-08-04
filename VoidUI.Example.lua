@@ -4,7 +4,7 @@
 ]]
 
 -- HARD cache-bust: pin commit SHA (query ?v= อย่างเดียวไม่พอบน executor หลายตัว)
-local VOIDUI_SHA = "a65b02eaeb2d74b99a0fa7c99ba174fec006f6f3"
+local VOIDUI_SHA = "15bc3aa6468d3ac66b1dd9f6da75dae194084685"
 local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/" .. VOIDUI_SHA .. "/VoidUI.lua"
 
 local function loadLib()
@@ -435,7 +435,7 @@ do
 end
 
 do
-    local demo = Settings:Section({ Title = "NEW · v1.7.8", Icon = "lucide:sparkles" })
+    local demo = Settings:Section({ Title = "NEW · v1.7.9", Icon = "lucide:sparkles" })
     demo:Paragraph({
         Title = "What's new",
         Icon = "lucide:info",
