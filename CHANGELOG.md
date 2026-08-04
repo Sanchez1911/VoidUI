@@ -1,5 +1,19 @@
 # VoidUI Changelog
 
+## 1.7.4 — Dense controls (clean UX)
+
+### Density
+- Row pad แน่นขึ้น · title 13px · desc 11px (mute)
+- Input box สูง 26px · TextSize 12
+- Dropdown chip 120×26 (เดิม ~136×30)
+- Slider value box 48×18 · TextSize 11
+- Toggle right slot 42×24
+
+### UX note
+- Icon/Image ยังรองรับทุกแถว แต่แนะนำใส่เฉพาะ **Section / Tab / PriorityList values** — ไม่ spam ทุก Toggle
+
+---
+
 ## 1.7.3 — Eager swap + denser clean
 
 ### PriorityList
