@@ -1,5 +1,23 @@
 # VoidUI Changelog
 
+## 1.7.5 — Balanced comfort scale
+
+1.7.4 แน่น/จิ๋วเกิน — ดึงกลับกลาง ๆ ให้คลิกง่าย สมดุลกับข้อความ
+
+### Controls
+- Row pad 7/10 · title 14px · desc 12px
+- Toggle **50×28** · knob 24
+- Dropdown chip **136×30** · label 13px
+- Input box **32px** · text 13
+- Slider track 8 · knob 18 · value box 56×22
+- Clean Button icon slot 34 · icon 18
+- PriorityList row **48px** · gap 6 · label 14
+- Section header 14 · page tab สูงขึ้นเล็กน้อย
+
+ยังคงแนว clean: ไม่บังคับ icon ทุกแถว
+
+---
+
 ## 1.7.4 — Dense controls (clean UX)
 
 ### Density
