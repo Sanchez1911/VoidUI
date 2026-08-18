@@ -1,5 +1,52 @@
 # VoidUI Changelog
 
+## 1.8.0 — Flat charcoal (anti-slop)
+
+เทียบ Callisto / Lumen / Hydroxide แล้วตัดของที่ทำให้ดู AI:
+
+- **Theme กลาง:** charcoal เทา ไม่ใช่ดำม่วงทุกชั้น
+- **Accent เฉพาะ active:** toggle ON, slider fill, tab ที่เลือก — ไม่ใช่เส้น sidebar / search / tooltip / dropdown rail
+- **Bloom ปิด default** + ไม่มีแท่งม่วงใต้หัวข้อ
+- **มุมเท่ากัน:** window 12 · card/control 8 (ไม่ใช่ 26/17/14 ปน)
+- **Sidebar:** วงกลมจางหลังไอคอน (แบบ Lumen) ไม่มี pill ซ้าย
+- **Section title:** เทาธรรมดา ไม่ ALL CAPS glow
+- **Slider:** รางบาง 4px + knob ขาว 12px
+- **Open button:** วงกลมแบน ไม่มี glow ม่วง
+- **Notify / search / dropdown menu:** ขอบเทาบาง ไม่มี wash
+
+`CreateWindow({ Bloom = false, Transparency = 0.06, CornerRadius = 12 })`
+
+---
+
+## 1.7.15 — Dropdown above Popup
+
+- Dropdown menus use ZIndex 920+ so they show on top of `W:Popup` (700)
+- Dropdown label resolves `{Id, Name}` so saved ids display the pretty name (Tower not TowerOfGod)
+
+## 1.7.14 — Popup host page
+
+- `W:Popup`: sections build on a hidden `_popup_host` page (no extra Farm subtab, no steal from Auto Join)
+- `Tab:Page({ Hidden = true })` stays off the subtab bar
+
+## 1.7.13 — Panel (item / progress rows)
+
+### Panel
+- `Section:Panel({ Title, Desc, Icon, Values, EmptyText, RowHeight, Flag })`
+- แต่ละแถว: ไอคอน + ชื่อ + ตัวเลขขวา + บรรทัดรอง
+- `api:Set(values)` รีเฟรชได้ (ใช้โชว์ goal / ของในกระเป๋า)
+
+```lua
+S:Panel({
+  Title = "Daily Goals",
+  Desc = "Farm to Goal. Start again when below Restock.",
+  Values = {
+    { Name = "Fuel Cell", Id = "ExpeditionFuel", Image = "rbxassetid://…", Right = "320 / 1000", Sub = "Restock under 500" },
+  },
+})
+```
+
+---
+
 ## 1.7.12 — Flexible Section headers (sane default)
 
 ### Section header sizing

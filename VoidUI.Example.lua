@@ -46,11 +46,11 @@ local Window = VoidUI:CreateWindow({
     Icon = "rbxassetid://111627748770819", -- hub logo (Tap Sim / brand)
     Accent = Color3.fromRGB(162, 89, 255), -- void purple
     Size = UDim2.fromOffset(720, 560),
-    Transparency = 0.16, -- glass
-    Bloom = true, -- header/title accent bloom (not outer glow)
+    Transparency = 0.06,
+    Bloom = false,
     Search = true, -- top search bar
     OpenButton = true, -- floating icon for mobile toggle
-    CornerRadius = 26,
+    CornerRadius = 12,
     ToggleKey = Enum.KeyCode.G,
     Folder = "VoidUI_Demo",
 })
@@ -435,7 +435,7 @@ do
 end
 
 do
-    local demo = Settings:Section({ Title = "NEW · v1.7.9", Icon = "lucide:sparkles" })
+    local demo = Settings:Section({ Title = "NEW · v1.7.10", Icon = "lucide:sparkles" })
     demo:Paragraph({
         Title = "What's new",
         Icon = "lucide:info",
