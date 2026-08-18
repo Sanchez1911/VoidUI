@@ -1,5 +1,15 @@
 # VoidUI Changelog
 
+## 1.8.3 — Chrome match (Notify / lists / slider)
+
+- **Notify:** การ์ดเดียวกับหน้าต่าง — ไม่มีแท่งม่วงซ้าย เหลือ timer 1px
+- **PriorityList:** ไม่มี tick ม่วง · #N เทา · hover/ghost ใช้ BgHover
+- **Slider value box:** ตัวเลขขาว ขอบเทา
+- **Dropdown / search / Panel / filled buttons:** ตัดโทนม่วงตกแต่ง
+- **Tab tooltip** เล็กลง
+
+---
+
 ## 1.8.2 — Compact rows + chrome
 
 - **Compact (default on):** ซ่อน `Desc` ทุกแถว — `CreateWindow({ Compact = false })` ถ้าอยากได้คำอธิบายคืน

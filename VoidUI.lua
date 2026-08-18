@@ -17,7 +17,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.8.2",
+    Version = "1.8.3",
     _windows = {},
 }
 
@@ -450,35 +450,25 @@ local function ensureNotifHost()
     return notifHost
 end
 
--- Hard toast: left tick + title/body, no AI chip/wash. Icon only if passed.
+-- Toast: same charcoal card as the hub. Timer is the only accent.
 function VoidUI:Notify(opts)
     opts = opts or {}
     local host = ensureNotifHost()
     local duration = opts.Duration or 3.2
     local accent = opts.Accent or Theme.Accent
-    local iconName = opts.Icon -- nil = no icon (cleaner)
+    local iconName = opts.Icon
 
     local card = mk("Frame", {
-        BackgroundColor3 = Theme.BgSection,
-        BackgroundTransparency = 0.02,
-        Size = UDim2.fromOffset(268, 0),
+        BackgroundColor3 = Theme.Bg,
+        BackgroundTransparency = 0.04,
+        Size = UDim2.fromOffset(260, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         ClipsDescendants = true,
         Parent = host,
     })
-    corner(card, 8)
+    corner(card, Theme.RCard or 8)
     stroke(card, Theme.Stroke, 1, 0.35)
-    pad(card, 10, 12, 11, 12)
-
-    local tick = mk("Frame", {
-        BackgroundColor3 = accent,
-        BorderSizePixel = 0,
-        Size = UDim2.new(0, 2, 1, 6),
-        Position = UDim2.fromOffset(-12, -3),
-        ZIndex = 3,
-        Parent = card,
-    })
-    corner(tick, 1)
+    pad(card, 10, 12, 12, 12)
 
     local textLeft = 0
     if iconName then
@@ -520,7 +510,7 @@ function VoidUI:Notify(opts)
     end
 
     local timerTrack = mk("Frame", {
-        BackgroundColor3 = Color3.fromRGB(32, 28, 42),
+        BackgroundColor3 = Theme.Divider,
         BorderSizePixel = 0,
         AnchorPoint = Vector2.new(0, 1),
         Position = UDim2.new(0, -12, 1, 11),
@@ -1036,8 +1026,8 @@ function VoidUI:CreateWindow(cfg)
             local y = row.AbsolutePosition.Y - frame.AbsolutePosition.Y + frame.CanvasPosition.Y - 64
             frame.CanvasPosition = Vector2.new(0, math.max(0, y))
             local flash = mk("Frame", {
-                BackgroundColor3 = accent,
-                BackgroundTransparency = 0.72,
+                BackgroundColor3 = T.BgHover,
+                BackgroundTransparency = 0.35,
                 Size = UDim2.fromScale(1, 1),
                 ZIndex = 5,
                 Parent = row,
@@ -1152,7 +1142,7 @@ function VoidUI:CreateWindow(cfg)
 
         for _, e in ipairs(matches) do
             local item = mk("TextButton", {
-                BackgroundColor3 = Color3.fromRGB(28, 24, 38),
+                BackgroundColor3 = T.BgHover,
                 BackgroundTransparency = 1,
                 AutoButtonColor = false,
                 Text = "",
@@ -1528,11 +1518,11 @@ function VoidUI:CreateWindow(cfg)
             })
             corner(tip, rCtrl)
             stroke(tip, T.Stroke, 1, 0.35)
-            pad(tip, 6, 10, 6, 10)
+            pad(tip, 4, 8, 4, 8)
             mk("TextLabel", {
                 BackgroundTransparency = 1,
-                Font = Fonts.Title,
-                TextSize = 12,
+                Font = Fonts.Body,
+                TextSize = 11,
                 TextColor3 = T.Text,
                 Text = tabTitle,
                 AutomaticSize = Enum.AutomaticSize.XY,
@@ -1955,7 +1945,7 @@ function VoidUI:CreateWindow(cfg)
                         BackgroundColor3 = T.BgInput,
                         Font = Fonts.Title,
                         TextSize = 12,
-                        TextColor3 = accent,
+                        TextColor3 = T.Text,
                         Text = fmt(value),
                         ClearTextOnFocus = false,
                         TextXAlignment = Enum.TextXAlignment.Center,
@@ -1964,8 +1954,8 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.fromOffset(56, 22),
                         Parent = top,
                     })
-                    corner(valBox, 8)
-                    stroke(valBox, Color3.fromRGB(48, 46, 58), 1, 0.5)
+                    corner(valBox, rCtrl)
+                    stroke(valBox, T.Stroke, 1, 0.4)
                     if suffix ~= "" then
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
@@ -2356,8 +2346,8 @@ function VoidUI:CreateWindow(cfg)
                             for _, v in ipairs(filtered) do
                                 local selected = isSelected(v)
                                 local item = mk("TextButton", {
-                                    BackgroundColor3 = selected and accent or Color3.fromRGB(28, 24, 38),
-                                    BackgroundTransparency = selected and 0.82 or 1,
+                                    BackgroundColor3 = selected and T.BgHover or T.BgHover,
+                                    BackgroundTransparency = selected and 0.15 or 1,
                                     AutoButtonColor = false,
                                     Active = true,
                                     Text = "",
@@ -2383,7 +2373,7 @@ function VoidUI:CreateWindow(cfg)
                                 local asset = entryAsset(v)
                                 if asset then
                                     local slot = mk("Frame", {
-                                        BackgroundColor3 = Color3.fromRGB(20, 18, 28),
+                                        BackgroundColor3 = T.BgInput,
                                         BackgroundTransparency = 0.35,
                                         Size = UDim2.fromOffset(iconSz, iconSz),
                                         AnchorPoint = Vector2.new(0, 0.5),
@@ -2406,7 +2396,7 @@ function VoidUI:CreateWindow(cfg)
                                     Font = Fonts.Body,
                                     TextSize = 13,
                                     TextScaled = false,
-                                    TextColor3 = selected and Color3.fromRGB(236, 228, 255) or T.Text,
+                                    TextColor3 = T.Text,
                                     TextXAlignment = Enum.TextXAlignment.Left,
                                     TextYAlignment = Enum.TextYAlignment.Center,
                                     TextTruncate = Enum.TextTruncate.AtEnd,
@@ -2426,7 +2416,7 @@ function VoidUI:CreateWindow(cfg)
 
                                 item.MouseEnter:Connect(function()
                                     if not isSelected(v) then
-                                        tween(item, TI(0.1), { BackgroundTransparency = 0.88, BackgroundColor3 = Color3.fromRGB(36, 30, 50) })
+                                        tween(item, TI(0.1), { BackgroundTransparency = 0.2, BackgroundColor3 = T.BgHover })
                                     end
                                 end)
                                 item.MouseLeave:Connect(function()
@@ -2504,11 +2494,11 @@ function VoidUI:CreateWindow(cfg)
                     box.MouseButton1Click:Connect(openMenu)
                     hover(box, function()
                         if not open then
-                            tween(box, TI(0.12), { BackgroundColor3 = Color3.fromRGB(30, 26, 40) })
+                            tween(box, TI(0.12), { BackgroundColor3 = T.BgHover })
                         end
                     end, function()
                         if not open then
-                            tween(box, TI(0.12), { BackgroundColor3 = Color3.fromRGB(24, 20, 32) })
+                            tween(box, TI(0.12), { BackgroundColor3 = T.BgInput })
                         end
                     end)
 
@@ -2589,17 +2579,17 @@ function VoidUI:CreateWindow(cfg)
 
                     local bg, bgHover, textCol, strokeCol, strokeT
                     if style == "ghost" then
-                        bg = Color3.fromRGB(24, 20, 32)
-                        bgHover = Color3.fromRGB(34, 28, 46)
+                        bg = T.BgInput
+                        bgHover = T.BgHover
                         textCol = T.Text
-                        strokeCol = Color3.fromRGB(52, 48, 64)
-                        strokeT = 0.5
+                        strokeCol = T.Stroke
+                        strokeT = 0.4
                     elseif style == "soft" then
-                        bg = Color3.fromRGB(36, 28, 54)
-                        bgHover = Color3.fromRGB(48, 36, 72)
-                        textCol = Color3.fromRGB(236, 228, 255)
-                        strokeCol = Color3.fromRGB(70, 52, 100)
-                        strokeT = 0.6
+                        bg = T.BgHover
+                        bgHover = Color3.fromRGB(48, 48, 54)
+                        textCol = T.Text
+                        strokeCol = T.Stroke
+                        strokeT = 0.45
                     else
                         bg = accent
                         bgHover = T.AccentDim
@@ -3041,18 +3031,18 @@ function VoidUI:CreateWindow(cfg)
                         local num = r:FindFirstChild("Num")
                         if num then num.Text = "#" .. tostring(i) end
                         if lit then
-                            r.BackgroundColor3 = Color3.fromRGB(32, 26, 46)
+                            r.BackgroundColor3 = T.BgHover
                             local st = r:FindFirstChildOfClass("UIStroke")
                             if st then
-                                st.Color = accent
-                                st.Transparency = 0.4
+                                st.Color = T.Stroke
+                                st.Transparency = 0.25
                             end
                         else
-                            r.BackgroundColor3 = Color3.fromRGB(22, 20, 30)
+                            r.BackgroundColor3 = T.BgInput
                             local st = r:FindFirstChildOfClass("UIStroke")
                             if st then
-                                st.Color = Color3.fromRGB(40, 38, 50)
-                                st.Transparency = 0.65
+                                st.Color = T.Stroke
+                                st.Transparency = 0.5
                             end
                         end
                     end
@@ -3139,7 +3129,7 @@ function VoidUI:CreateWindow(cfg)
                         local g = src:Clone()
                         g.Name = "VoidDragGhost"
                         g.BackgroundTransparency = 0.08
-                        g.BackgroundColor3 = Color3.fromRGB(28, 24, 40)
+                        g.BackgroundColor3 = T.BgSection
                         g.Size = UDim2.fromOffset(src.AbsoluteSize.X, src.AbsoluteSize.Y)
                         g.AnchorPoint = Vector2.new(0, 0)
                         g.Parent = ghostParent
@@ -3151,8 +3141,8 @@ function VoidUI:CreateWindow(cfg)
                         g.ZIndex = 900
                         local gst = g:FindFirstChildOfClass("UIStroke")
                         if gst then
-                            gst.Color = accent
-                            gst.Transparency = 0.35
+                            gst.Color = T.Stroke
+                            gst.Transparency = 0.2
                             gst.Thickness = 1
                         end
                         local gsc = g:FindFirstChild("DragScale")
@@ -3208,27 +3198,16 @@ function VoidUI:CreateWindow(cfg)
 
                         for i, v in ipairs(items) do
                             local r = mk("TextButton", {
-                                BackgroundColor3 = Color3.fromRGB(22, 20, 30),
+                                BackgroundColor3 = T.BgInput,
                                 AutoButtonColor = false,
                                 Text = "",
                                 Size = UDim2.new(1, 0, 0, ROW_H),
                                 LayoutOrder = i,
                                 Parent = listFrame,
                             })
-                            corner(r, 8)
-                            stroke(r, Color3.fromRGB(40, 38, 50), 1, 0.65)
+                            corner(r, rCtrl)
+                            stroke(r, T.Stroke, 1, 0.5)
                             rowFrames[i] = r
-
-                            -- thin left tick
-                            mk("Frame", {
-                                BackgroundColor3 = accent,
-                                BackgroundTransparency = 0.55,
-                                Size = UDim2.new(0, 2, 1, -12),
-                                Position = UDim2.fromOffset(0, 6),
-                                BorderSizePixel = 0,
-                                ZIndex = 2,
-                                Parent = r,
-                            })
 
                             local grip = makeIcon(r, "lucide:grip-vertical", 14, T.TextMute, 2)
                             grip.AnchorPoint = Vector2.new(0, 0.5)
@@ -3238,7 +3217,7 @@ function VoidUI:CreateWindow(cfg)
                             if showItemIcons then
                                 local asset = entryAsset(v) or normalizeAsset(type(v) == "table" and (v.Image or v.Icon))
                                 if asset then
-                                    local ic = makeIcon(r, asset, 16, Color3.fromRGB(230, 226, 240), 2)
+                                    local ic = makeIcon(r, asset, 16, T.Text, 2)
                                     ic.AnchorPoint = Vector2.new(0, 0.5)
                                     ic.Position = UDim2.new(0, 26, 0.5, 0)
                                     left = 48
@@ -3249,8 +3228,8 @@ function VoidUI:CreateWindow(cfg)
                                 Name = "Num",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Title,
-                                TextSize = 12,
-                                TextColor3 = accent,
+                                TextSize = 11,
+                                TextColor3 = T.TextMute,
                                 Text = "#" .. i,
                                 AnchorPoint = Vector2.new(0, 0.5),
                                 Position = UDim2.new(0, left, 0.5, 0),
@@ -3285,11 +3264,11 @@ function VoidUI:CreateWindow(cfg)
 
                             r.MouseEnter:Connect(function()
                                 if drag.active then return end
-                                tween(r, TI(0.1), { BackgroundColor3 = Color3.fromRGB(28, 24, 38) })
+                                tween(r, TI(0.1), { BackgroundColor3 = T.BgHover })
                             end)
                             r.MouseLeave:Connect(function()
                                 if drag.active then return end
-                                tween(r, TI(0.1), { BackgroundColor3 = Color3.fromRGB(22, 20, 30) })
+                                tween(r, TI(0.1), { BackgroundColor3 = T.BgInput })
                             end)
                         end
                         api.Values = items
@@ -3499,17 +3478,17 @@ function VoidUI:CreateWindow(cfg)
                             local sub = rowSub(v)
                             local h = (sub ~= "" and ROW_H) or math.max(36, ROW_H - 6)
                             local r = mk("Frame", {
-                                BackgroundColor3 = Color3.fromRGB(22, 20, 30),
+                                BackgroundColor3 = T.BgInput,
                                 Size = UDim2.new(1, 0, 0, h),
                                 LayoutOrder = i,
                                 Parent = listHost,
                             })
-                            corner(r, 8)
-                            stroke(r, Color3.fromRGB(40, 38, 50), 1, 0.65)
+                            corner(r, rCtrl)
+                            stroke(r, T.Stroke, 1, 0.5)
                             local left = 10
                             local asset = entryAsset(v)
                             if asset then
-                                local ic = makeIcon(r, asset, 22, Color3.fromRGB(230, 226, 240), 2)
+                                local ic = makeIcon(r, asset, 22, T.Text, 2)
                                 ic.AnchorPoint = Vector2.new(0, 0.5)
                                 ic.Position = UDim2.new(0, 10, 0.5, 0)
                                 left = 40
@@ -3521,7 +3500,7 @@ function VoidUI:CreateWindow(cfg)
                                     BackgroundTransparency = 1,
                                     Font = Fonts.Title,
                                     TextSize = 12,
-                                    TextColor3 = accent,
+                                    TextColor3 = T.TextDim,
                                     TextXAlignment = Enum.TextXAlignment.Right,
                                     Text = rightTxt,
                                     AnchorPoint = Vector2.new(1, 0.5),

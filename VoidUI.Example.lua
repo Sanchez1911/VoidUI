@@ -436,11 +436,10 @@ do
 end
 
 do
-    local demo = Settings:Section({ Title = "NEW · v1.7.10", Icon = "lucide:sparkles" })
+    local demo = Settings:Section({ Title = "NEW · v1.8.3", Icon = "lucide:sparkles" })
     demo:Paragraph({
         Title = "What's new",
-        Icon = "lucide:info",
-        Content = "Smooth PriorityList ghost-drag · Icon/Image ทุก Section/แถว · hard Notify toast · see CHANGELOG.md / VoidUI.API.md",
+        Content = "Compact rows · charcoal chrome · Notify matches hub · PriorityList without purple ticks",
     })
     demo:Slider({
         Title = "Editable Scale",
@@ -537,7 +536,7 @@ end
 
 VoidUI:Notify({
     Title = "VoidUI " .. VoidUI.Version,
-    Content = "Drag sticks to cursor · hard toast Notify",
+    Content = "Compact · charcoal · matching toast",
     Duration = 3.5,
 })
 
