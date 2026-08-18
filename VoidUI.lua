@@ -17,7 +17,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.8.1",
+    Version = "1.8.2",
     _windows = {},
 }
 
@@ -592,6 +592,7 @@ function VoidUI:CreateWindow(cfg)
         glass = (cfg.Transparent == false) and 0.02 or 0.06
     end
     glass = math.clamp(tonumber(glass) or 0.06, 0, 0.6)
+    local compactOn = cfg.Compact ~= false -- hide per-row Desc (Lumen density)
     local bloomOn = cfg.Bloom == true -- off by default (glow titles = slop)
     local wantOpenBtn = cfg.OpenButton ~= false
     local wantSearch = cfg.Search ~= false
@@ -599,6 +600,22 @@ function VoidUI:CreateWindow(cfg)
     local rCard = T.RCard or 8
     local rCtrl = T.RCtrl or 8
     local cornerR = cfg.CornerRadius or rWin
+
+    local function styleScroll(sf)
+        sf.ScrollBarThickness = 2
+        sf.ScrollBarImageColor3 = T.TextMute
+        sf.ScrollBarImageTransparency = 0.45
+        sf.BorderSizePixel = 0
+    end
+
+    local function prettySectionTitle(s)
+        s = tostring(s or "")
+        if s == "" or s:find("%l") then return s end
+        return (s:gsub("%S+", function(w)
+            if #w <= 3 then return w end
+            return w:sub(1, 1) .. w:sub(2):lower()
+        end))
+    end
 
     -- Section header sizing (window default → per-Section override)
     -- Compact by default — 1.7.11's 16/20 was too loud for lucide icons.
@@ -648,7 +665,7 @@ function VoidUI:CreateWindow(cfg)
     stroke(main, T.Stroke, 1, 0.45)
 
     -- Sidebar
-    local sidebarW = 66
+    local sidebarW = 52
     local sidebar = mk("Frame", {
         Name = "Sidebar",
         BackgroundColor3 = T.BgSidebar,
@@ -670,13 +687,12 @@ function VoidUI:CreateWindow(cfg)
     local logo = mk("Frame", {
         Name = "Logo",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 70),
+        Size = UDim2.new(1, 0, 0, 54),
         Parent = sidebar,
     })
-    -- hub logo alone (no chip) — asset may already include soft glow
     local logoIsAsset = typeof(logoIcon) == "string" and (logoIcon:find("rbxasset", 1, true) or logoIcon:find("http", 1, true))
     local logoTint = Color3.new(1, 1, 1)
-    local logoHolder = makeIcon(logo, logoIcon, logoIsAsset and 36 or 26, logoTint, 2)
+    local logoHolder = makeIcon(logo, logoIcon, logoIsAsset and 28 or 20, logoTint, 2)
     logoHolder.AnchorPoint = Vector2.new(0.5, 0.5)
     logoHolder.Position = UDim2.fromScale(0.5, 0.5)
 
@@ -684,15 +700,15 @@ function VoidUI:CreateWindow(cfg)
         Name = "Nav",
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        Position = UDim2.fromOffset(0, 70),
-        Size = UDim2.new(1, 0, 1, -70),
+        Position = UDim2.fromOffset(0, 54),
+        Size = UDim2.new(1, 0, 1, -54),
         ScrollBarThickness = 0,
         CanvasSize = UDim2.new(0, 0, 0, 0),
         AutomaticCanvasSize = Enum.AutomaticSize.Y,
         Parent = sidebar,
     })
-    list(sideNav, Enum.FillDirection.Vertical, 5, Enum.HorizontalAlignment.Center)
-    pad(sideNav, 4, 0, 16, 0)
+    list(sideNav, Enum.FillDirection.Vertical, 4, Enum.HorizontalAlignment.Center)
+    pad(sideNav, 2, 0, 12, 0)
 
     -- Content shell (transparent so main corner radius fits clean — no bottom seam)
     local content = mk("Frame", {
@@ -1131,6 +1147,7 @@ function VoidUI:CreateWindow(cfg)
             ZIndex = 81,
             Parent = searchPanel,
         })
+        styleScroll(host)
         list(host, Enum.FillDirection.Vertical, gap)
 
         for _, e in ipairs(matches) do
@@ -1462,7 +1479,7 @@ function VoidUI:CreateWindow(cfg)
             Name = "Tab_" .. tabTitle,
             BackgroundTransparency = 1,
             Text = "",
-            Size = UDim2.fromOffset(48, 48),
+            Size = UDim2.fromOffset(40, 40),
             AutoButtonColor = false,
             Parent = sideNav,
         })
@@ -1478,12 +1495,12 @@ function VoidUI:CreateWindow(cfg)
             BackgroundTransparency = 1,
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.fromScale(0.5, 0.5),
-            Size = UDim2.fromOffset(36, 36),
+            Size = UDim2.fromOffset(32, 32),
             Parent = btn,
         })
-        corner(iconBg, 18)
+        corner(iconBg, 16)
 
-        local iconHolder, iconLbl = makeIcon(iconBg, tabIcon, 20, T.TextDim, 2)
+        local iconHolder, iconLbl = makeIcon(iconBg, tabIcon, 18, T.TextDim, 2)
         iconHolder.AnchorPoint = Vector2.new(0.5, 0.5)
         iconHolder.Position = UDim2.fromScale(0.5, 0.5)
 
@@ -1594,14 +1611,12 @@ function VoidUI:CreateWindow(cfg)
                 BackgroundTransparency = 1,
                 BorderSizePixel = 0,
                 Size = UDim2.fromScale(1, 1),
-                ScrollBarThickness = 2,
-                ScrollBarImageColor3 = T.TextMute,
-                ScrollBarImageTransparency = 0.35,
                 CanvasSize = UDim2.new(0, 0, 0, 0),
                 AutomaticCanvasSize = Enum.AutomaticSize.None,
                 Visible = false,
                 Parent = pageHost,
             })
+            styleScroll(frame)
             -- two-column optional layout container
             local body = mk("Frame", {
                 Name = "Body",
@@ -1659,7 +1674,7 @@ function VoidUI:CreateWindow(cfg)
                 sopts = sopts or {}
                 local colIndex = sopts.Column or 1
                 local parentCol = colFrames[colIndex] or colFrames[1]
-                local secTitle = sopts.Title or "SECTION"
+                local secTitle = prettySectionTitle(sopts.Title or "Section")
                 local secIcon = normalizeAsset(sopts.Icon or sopts.Image)
 
                 local wrap = mk("Frame", {
@@ -1750,8 +1765,9 @@ function VoidUI:CreateWindow(cfg)
                     })
                 end
 
-                -- base row: title/desc left + control right. Row icons skipped (section header only).
+                -- base row: title left + control right. Compact hides Desc.
                 local function makeRow(titleText, descText, iconSpec)
+                    if compactOn then descText = nil end
                     addDivider()
                     rowOrder = rowOrder + 1
                     local row = mk("Frame", {
@@ -1967,7 +1983,7 @@ function VoidUI:CreateWindow(cfg)
                         valBox.Size = UDim2.fromOffset(56, 22)
                     end
 
-                    if o.Desc and o.Desc ~= "" then
+                    if not compactOn and o.Desc and o.Desc ~= "" then
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
@@ -2310,13 +2326,11 @@ function VoidUI:CreateWindow(cfg)
                                 Position = UDim2.fromOffset(0, searchH),
                                 Size = UDim2.new(1, 0, 0, viewH),
                                 CanvasSize = UDim2.fromOffset(0, fH),
-                                ScrollBarThickness = 3,
-                                ScrollBarImageColor3 = accent,
-                                ScrollBarImageTransparency = 0.35,
                                 ScrollingEnabled = fH > viewH,
                                 ZIndex = z0 + 3,
                                 Parent = menu,
                             })
+                            styleScroll(scroll)
                             local listHost = mk("Frame", {
                                 BackgroundTransparency = 1,
                                 Size = UDim2.new(1, 0, 0, fH),
@@ -2637,7 +2651,7 @@ function VoidUI:CreateWindow(cfg)
                         AutomaticSize = Enum.AutomaticSize.X,
                         Parent = labels,
                     })
-                    if o.Desc and o.Desc ~= "" then
+                    if not compactOn and o.Desc and o.Desc ~= "" then
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
@@ -2697,7 +2711,7 @@ function VoidUI:CreateWindow(cfg)
                         Size = UDim2.new(1, 0, 0, 18),
                         Parent = inputHead,
                     })
-                    if o.Desc and o.Desc ~= "" then
+                    if not compactOn and o.Desc and o.Desc ~= "" then
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
@@ -2941,7 +2955,7 @@ function VoidUI:CreateWindow(cfg)
                             Parent = head,
                         })
                     end
-                    if o.Desc and o.Desc ~= "" then
+                    if not compactOn and o.Desc and o.Desc ~= "" then
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
@@ -2991,6 +3005,7 @@ function VoidUI:CreateWindow(cfg)
                             ClipsDescendants = true,
                             Parent = wrap,
                         })
+                        styleScroll(scroll)
                         listFrame = mk("Frame", {
                             BackgroundTransparency = 1,
                             Size = UDim2.new(1, 0, 0, 0),
@@ -3420,7 +3435,7 @@ function VoidUI:CreateWindow(cfg)
                             Parent = head,
                         })
                     end
-                    if o.Desc and o.Desc ~= "" then
+                    if not compactOn and o.Desc and o.Desc ~= "" then
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
@@ -3685,16 +3700,16 @@ function VoidUI:CreateWindow(cfg)
 
         local panel = mk("Frame", {
             Name = "Popup",
-            BackgroundColor3 = T.BgPanel,
-            BackgroundTransparency = math.clamp(glass * 0.5, 0.02, 0.2),
+            BackgroundColor3 = T.Bg,
+            BackgroundTransparency = math.clamp(glass, 0.02, 0.12),
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.fromScale(0.5, 0.5),
             Size = pSize,
             ZIndex = 710,
             Parent = screen,
         })
-        corner(panel, 18)
-        stroke(panel, Color3.fromRGB(48, 46, 58), 1, 0.45)
+        corner(panel, rWin)
+        stroke(panel, T.Stroke, 1, 0.4)
 
         local header = mk("Frame", {
             BackgroundTransparency = 1,
@@ -3703,17 +3718,17 @@ function VoidUI:CreateWindow(cfg)
             Parent = panel,
         })
         pad(header, 0, 14, 0, 14)
-        local ih = makeIcon(header, pIcon, 18, accent, 712)
-        ih.Position = UDim2.fromOffset(0, 15)
+        local ih = makeIcon(header, pIcon, 16, T.TextDim, 712)
+        ih.Position = UDim2.fromOffset(0, 16)
         mk("TextLabel", {
             BackgroundTransparency = 1,
             Font = Fonts.Title,
-            TextSize = 16,
+            TextSize = 15,
             TextColor3 = T.Text,
             TextXAlignment = Enum.TextXAlignment.Left,
             Text = pTitle,
-            Position = UDim2.fromOffset(28, 14),
-            Size = UDim2.new(1, -70, 0, 22),
+            Position = UDim2.fromOffset(24, 14),
+            Size = UDim2.new(1, -64, 0, 22),
             ZIndex = 712,
             Parent = header,
         })
@@ -3723,11 +3738,11 @@ function VoidUI:CreateWindow(cfg)
             Text = "",
             AnchorPoint = Vector2.new(1, 0.5),
             Position = UDim2.new(1, 0, 0.5, 0),
-            Size = UDim2.fromOffset(30, 30),
+            Size = UDim2.fromOffset(28, 28),
             ZIndex = 712,
             Parent = header,
         })
-        corner(closeBtn, 10)
+        corner(closeBtn, rCtrl)
         local cx = makeIcon(closeBtn, "lucide:x", 14, T.TextDim, 713)
         cx.AnchorPoint = Vector2.new(0.5, 0.5)
         cx.Position = UDim2.fromScale(0.5, 0.5)
@@ -3747,13 +3762,12 @@ function VoidUI:CreateWindow(cfg)
             BorderSizePixel = 0,
             Position = UDim2.fromOffset(0, 52),
             Size = UDim2.new(1, 0, 1, -60),
-            ScrollBarThickness = 3,
-            ScrollBarImageColor3 = accent,
             CanvasSize = UDim2.new(0, 0, 0, 0),
             AutomaticCanvasSize = Enum.AutomaticSize.Y,
             ZIndex = 711,
             Parent = panel,
         })
+        styleScroll(body)
         pad(body, 12, 14, 18, 14)
         list(body, Enum.FillDirection.Vertical, 10)
 
@@ -3781,7 +3795,7 @@ function VoidUI:CreateWindow(cfg)
         -- Isolated hidden page so Popup sections never land on Auto Join / first Farm page
         function Popup:Section(sopts)
             sopts = sopts or {}
-            local secTitle = sopts.Title or "SECTION"
+            local secTitle = prettySectionTitle(sopts.Title or "Section")
             local hostTab = Window._tabs[1]
             if not hostTab then
                 return nil

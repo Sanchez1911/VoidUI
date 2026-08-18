@@ -1,5 +1,15 @@
 # VoidUI Changelog
 
+## 1.8.2 — Compact rows + chrome
+
+- **Compact (default on):** ซ่อน `Desc` ทุกแถว — `CreateWindow({ Compact = false })` ถ้าอยากได้คำอธิบายคืน
+- **Section ALL CAPS → Title Case** อัตโนมัติ (`TRAINING` → `Training`, คำสั้น `UI`/`PVE` คงเดิม)
+- **Scrollbar** เทา 2px ทั้งหน้า / dropdown / popup / PriorityList
+- **Popup** มุม/ขอบ/ปุ่มปิด ชุดเดียวกับหน้าหลัก
+- **Sidebar** 52px · โลโก้/แท็บเล็กลง
+
+---
+
 ## 1.8.1 — Density + subtab pills
 
 - **Row icons off:** Toggle/Slider/Input/Button leading icons ไม่โผล่ในแถว — เหลือไอคอนที่หัว Section + รายการ Dropdown/PriorityList

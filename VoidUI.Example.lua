@@ -51,6 +51,7 @@ local Window = VoidUI:CreateWindow({
     Search = true, -- top search bar
     OpenButton = true, -- floating icon for mobile toggle
     CornerRadius = 12,
+    Compact = true,
     ToggleKey = Enum.KeyCode.G,
     Folder = "VoidUI_Demo",
 })
