@@ -1,5 +1,14 @@
 # VoidUI Changelog
 
+## 1.8.1 — Density + subtab pills
+
+- **Row icons off:** Toggle/Slider/Input/Button leading icons ไม่โผล่ในแถว — เหลือไอคอนที่หัว Section + รายการ Dropdown/PriorityList
+- **ไม่มีเส้นแบ่งแถว:** ใช้ padding อย่างเดียว
+- **ช่องว่างแน่นขึ้น:** section gap 10 · wrap 6
+- **Subtabs:** pill เทา (ไม่มี underline ม่วง)
+
+---
+
 ## 1.8.0 — Flat charcoal (anti-slop)
 
 เทียบ Callisto / Lumen / Hydroxide แล้วตัดของที่ทำให้ดู AI:
