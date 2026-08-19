@@ -17,7 +17,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.8.4",
+    Version = "1.8.5",
     _windows = {},
 }
 
@@ -2233,13 +2233,14 @@ function VoidUI:CreateWindow(cfg)
                         local searchH = 0
                         local wantFilter = (o.Search ~= false) and (#values >= 6 or o.Search == true)
                         if wantFilter then searchH = 34 end
+                        local countH = multi and 22 or 0
 
                         local maxListH = math.floor((workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 720) * 0.42)
                         maxListH = math.clamp(maxListH, 180, 320)
                         local fullListH = #values * itemH + math.max(0, #values - 1) * gap
                         local listH = math.min(fullListH, maxListH)
                         local menuW = math.max(boxSz.X, 200)
-                        local menuH = padTop + padBot + searchH + listH
+                        local menuH = padTop + padBot + searchH + countH + listH
 
                         -- GuiInset-safe place (same ScreenGui IgnoreGuiInset)
                         local inset = GuiService:GetGuiInset()
@@ -2289,9 +2290,60 @@ function VoidUI:CreateWindow(cfg)
                         stroke(menu, T.Stroke, 1, 0.4)
                         pad(menu, padTop, 6, padBot, 6)
 
+                        local countLbl
+                        local rebuildList
+                        local function refreshCount()
+                            if not countLbl then return end
+                            local n = (type(current) == "table") and #current or 0
+                            countLbl.Text = n == 0 and "None selected" or (n .. " selected")
+                        end
+
+                        if multi then
+                            local countBar = mk("Frame", {
+                                BackgroundTransparency = 1,
+                                Position = UDim2.fromOffset(0, searchH),
+                                Size = UDim2.new(1, 0, 0, countH),
+                                ZIndex = z0 + 4,
+                                Parent = menu,
+                            })
+                            countLbl = mk("TextLabel", {
+                                BackgroundTransparency = 1,
+                                Font = Fonts.Body,
+                                TextSize = 11,
+                                TextColor3 = T.TextMute,
+                                TextXAlignment = Enum.TextXAlignment.Left,
+                                Text = "",
+                                Size = UDim2.new(1, -48, 1, 0),
+                                ZIndex = z0 + 5,
+                                Parent = countBar,
+                            })
+                            local clearBtn = mk("TextButton", {
+                                BackgroundTransparency = 1,
+                                AutoButtonColor = false,
+                                Font = Fonts.Body,
+                                TextSize = 11,
+                                TextColor3 = T.TextDim,
+                                Text = "Clear",
+                                AnchorPoint = Vector2.new(1, 0.5),
+                                Position = UDim2.new(1, 0, 0.5, 0),
+                                Size = UDim2.fromOffset(44, 18),
+                                ZIndex = z0 + 5,
+                                Parent = countBar,
+                            })
+                            clearBtn.MouseButton1Click:Connect(function()
+                                current = {}
+                                api.Value = current
+                                refreshPreview()
+                                fire()
+                                refreshCount()
+                                rebuildList(true)
+                            end)
+                            refreshCount()
+                        end
+
                         local filterQ = ""
                         local scroll
-                        local function rebuildList(keepScroll)
+                        rebuildList = function(keepScroll)
                             local keepY = 0
                             if keepScroll and scroll then
                                 keepY = scroll.CanvasPosition.Y
@@ -2307,7 +2359,7 @@ function VoidUI:CreateWindow(cfg)
 
                             local fH = #filtered * itemH + math.max(0, #filtered - 1) * gap
                             local viewH = math.min(math.max(fH, itemH), maxListH)
-                            local newMenuH = padTop + padBot + searchH + viewH
+                            local newMenuH = padTop + padBot + searchH + countH + viewH
                             menu.Size = UDim2.fromOffset(menuW, newMenuH)
                             if menuShadow then
                                 menuShadow.Size = UDim2.fromOffset(menuW + 20, newMenuH + 20)
@@ -2316,7 +2368,7 @@ function VoidUI:CreateWindow(cfg)
                             scroll = mk("ScrollingFrame", {
                                 BackgroundTransparency = 1,
                                 BorderSizePixel = 0,
-                                Position = UDim2.fromOffset(0, searchH),
+                                Position = UDim2.fromOffset(0, searchH + countH),
                                 Size = UDim2.new(1, 0, 0, viewH),
                                 CanvasSize = UDim2.fromOffset(0, fH),
                                 ScrollingEnabled = fH > viewH,
@@ -2451,6 +2503,7 @@ function VoidUI:CreateWindow(cfg)
                                         refreshPreview()
                                         fire()
                                         setRowSelected(isSelected(v))
+                                        refreshCount()
                                     else
                                         current = v
                                         api.Value = current
@@ -2493,9 +2546,6 @@ function VoidUI:CreateWindow(cfg)
                             sBox:GetPropertyChangedSignal("Text"):Connect(function()
                                 filterQ = sBox.Text
                                 rebuildList()
-                            end)
-                            task.defer(function()
-                                sBox:CaptureFocus()
                             end)
                         end
 

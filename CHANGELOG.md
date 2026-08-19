@@ -1,5 +1,12 @@
 # VoidUI Changelog
 
+## 1.8.5 — Dropdown search + count
+
+- เปิดเมนูแล้วไม่แย่งโฟกัสไปช่องค้นหา — คลิกช่องเองถ้าจะพิมพ์
+- Multi: แถบ `N selected` ค้างบนลิสต์ + ปุ่ม Clear
+
+---
+
 ## 1.8.4 — Multi dropdown keeps scroll
 
 - ติ๊กหลายตัวไม่ rebuild ลิสต์ → ไม่เด้งขึ้นบน
