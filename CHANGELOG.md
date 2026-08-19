@@ -1,5 +1,13 @@
 # VoidUI Changelog
 
+## 1.8.4 — Multi dropdown keeps scroll
+
+- ติ๊กหลายตัวไม่ rebuild ลิสต์ → ไม่เด้งขึ้นบน
+- ถ้ายัง rebuild (ค้นหา) จะจำ `CanvasPosition` ไว้
+- ตัดแท่งม่วงซ้ายในเมนู — เหลือแค่ check
+
+---
+
 ## 1.8.3 — Chrome match (Notify / lists / slider)
 
 - **Notify:** การ์ดเดียวกับหน้าต่าง — ไม่มีแท่งม่วงซ้าย เหลือ timer 1px

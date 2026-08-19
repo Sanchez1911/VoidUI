@@ -17,7 +17,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.8.3",
+    Version = "1.8.4",
     _windows = {},
 }
 
@@ -2285,13 +2285,17 @@ function VoidUI:CreateWindow(cfg)
                             ZIndex = z0 + 2,
                             Parent = screen,
                         })
-                        corner(menu, 12)
-                        stroke(menu, Color3.fromRGB(48, 46, 58), 1, 0.6)
+                        corner(menu, rCard)
+                        stroke(menu, T.Stroke, 1, 0.4)
                         pad(menu, padTop, 6, padBot, 6)
 
                         local filterQ = ""
                         local scroll
-                        local function rebuildList()
+                        local function rebuildList(keepScroll)
+                            local keepY = 0
+                            if keepScroll and scroll then
+                                keepY = scroll.CanvasPosition.Y
+                            end
                             if scroll then scroll:Destroy() end
                             local filtered = {}
                             local q = string.lower(filterQ)
@@ -2303,7 +2307,6 @@ function VoidUI:CreateWindow(cfg)
 
                             local fH = #filtered * itemH + math.max(0, #filtered - 1) * gap
                             local viewH = math.min(math.max(fH, itemH), maxListH)
-                            -- resize menu to filtered height
                             local newMenuH = padTop + padBot + searchH + viewH
                             menu.Size = UDim2.fromOffset(menuW, newMenuH)
                             if menuShadow then
@@ -2329,6 +2332,16 @@ function VoidUI:CreateWindow(cfg)
                             })
                             list(listHost, Enum.FillDirection.Vertical, gap)
 
+                            if keepScroll then
+                                local y = keepY
+                                task.defer(function()
+                                    if scroll and scroll.Parent then
+                                        local maxY = math.max(0, fH - viewH)
+                                        scroll.CanvasPosition = Vector2.new(0, math.clamp(y, 0, maxY))
+                                    end
+                                end)
+                            end
+
                             if #filtered == 0 then
                                 mk("TextLabel", {
                                     BackgroundTransparency = 1,
@@ -2346,7 +2359,7 @@ function VoidUI:CreateWindow(cfg)
                             for _, v in ipairs(filtered) do
                                 local selected = isSelected(v)
                                 local item = mk("TextButton", {
-                                    BackgroundColor3 = selected and T.BgHover or T.BgHover,
+                                    BackgroundColor3 = T.BgHover,
                                     BackgroundTransparency = selected and 0.15 or 1,
                                     AutoButtonColor = false,
                                     Active = true,
@@ -2355,20 +2368,8 @@ function VoidUI:CreateWindow(cfg)
                                     ZIndex = z0 + 5,
                                     Parent = listHost,
                                 })
-                                corner(item, 8)
+                                corner(item, rCtrl)
 
-                                local mark = mk("Frame", {
-                                    BackgroundColor3 = accent,
-                                    BackgroundTransparency = selected and 0 or 1,
-                                    BorderSizePixel = 0,
-                                    Size = UDim2.new(0, 2, 1, -10),
-                                    Position = UDim2.fromOffset(4, 5),
-                                    ZIndex = z0 + 6,
-                                    Parent = item,
-                                })
-                                corner(mark, 1)
-
-                                -- Fixed icon slot + fixed body font (never Title — looked like text scaled with asset)
                                 local textLeft = 14
                                 local asset = entryAsset(v)
                                 if asset then
@@ -2386,7 +2387,6 @@ function VoidUI:CreateWindow(cfg)
                                     local ic = makeIcon(slot, asset, iconSz - 4, Color3.new(1, 1, 1), z0 + 7)
                                     ic.AnchorPoint = Vector2.new(0.5, 0.5)
                                     ic.Position = UDim2.fromScale(0.5, 0.5)
-                                    -- keep full-color game assets; don't let layout expand
                                     ic.Size = UDim2.fromOffset(iconSz - 4, iconSz - 4)
                                     textLeft = 10 + iconSz + 10
                                 end
@@ -2408,11 +2408,22 @@ function VoidUI:CreateWindow(cfg)
                                     Parent = item,
                                 })
 
-                                if selected then
-                                    local chk = makeIcon(item, "lucide:check", 13, accent, z0 + 7)
-                                    chk.AnchorPoint = Vector2.new(1, 0.5)
-                                    chk.Position = UDim2.new(1, -8, 0.5, 0)
+                                local chkHold
+                                local function setRowSelected(on)
+                                    item.BackgroundTransparency = on and 0.15 or 1
+                                    item.BackgroundColor3 = T.BgHover
+                                    if on then
+                                        if not chkHold then
+                                            chkHold = makeIcon(item, "lucide:check", 13, accent, z0 + 7)
+                                            chkHold.AnchorPoint = Vector2.new(1, 0.5)
+                                            chkHold.Position = UDim2.new(1, -8, 0.5, 0)
+                                        end
+                                    elseif chkHold then
+                                        chkHold:Destroy()
+                                        chkHold = nil
+                                    end
                                 end
+                                setRowSelected(selected)
 
                                 item.MouseEnter:Connect(function()
                                     if not isSelected(v) then
@@ -2439,7 +2450,7 @@ function VoidUI:CreateWindow(cfg)
                                         api.Value = current
                                         refreshPreview()
                                         fire()
-                                        rebuildList()
+                                        setRowSelected(isSelected(v))
                                     else
                                         current = v
                                         api.Value = current
@@ -2459,7 +2470,7 @@ function VoidUI:CreateWindow(cfg)
                                 Parent = menu,
                             })
                             corner(searchBar, 8)
-                            stroke(searchBar, Color3.fromRGB(48, 46, 58), 1, 0.55)
+                            stroke(searchBar, T.Stroke, 1, 0.4)
                             local sIcon = makeIcon(searchBar, "lucide:search", 13, T.TextMute, 503)
                             sIcon.Position = UDim2.fromOffset(8, 7)
                             local sBox = mk("TextBox", {
