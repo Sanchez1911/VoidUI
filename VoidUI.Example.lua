@@ -4,7 +4,7 @@
 ]]
 
 -- HARD cache-bust: pin commit SHA (query ?v= อย่างเดียวไม่พอบน executor หลายตัว)
-local VOIDUI_SHA = "8436894110f032dbf460abe959984e10b952e6a5"
+local VOIDUI_SHA = "cd445a4a391c1c518f543af08aee1a1dd2d17275"
 local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/" .. VOIDUI_SHA .. "/VoidUI.lua"
 
 local function loadLib()
