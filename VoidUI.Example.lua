@@ -250,7 +250,7 @@ do
             if not Window.ScreenGui or not Window.ScreenGui.Parent then
                 break
             end
-            tick += 1
+            tick = tick + 1
             local plants = math.random(180, 300)
             log:Push({
                 Tag = "Farm",
@@ -264,6 +264,7 @@ do
     end)
 end
 
+do
     local limits = pageFarming:Section({ Title = "LIMITS" })
     limits:Dropdown({
         Title = "Plant count cap",
