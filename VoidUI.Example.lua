@@ -218,48 +218,43 @@ end
 
 do
     local status = pageFarming:Section({ Title = "STATUS" })
-    local log = status:Log({
-        Title = "Stream",
-        Height = 156,
-        Max = 40,
-        Filters = { "All", "Farm", "Check", "Fail" },
-    })
-    log:Push({ Tag = "Info", Text = "void " .. VoidUI.Version .. "  ·  ready", Tone = "mute" })
-    log:Push({ Tag = "Farm", Text = "garden  ·  plants 203/300", Tone = "ok" })
+    local log = status:Log({ Height = 92, Max = 24 })
+
+    local cash = 1240000
+    local function money(n)
+        local s = tostring(math.floor(n))
+        local k
+        repeat
+            s, k = s:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+        until k == 0
+        return "$" .. s
+    end
+
+    log:Set({ Label = "Cash", Value = money(cash) })
+    log:Push("Garden  ·  203 plants")
 
     status:Button({
-        Title = "Push farm line",
+        Title = "Sold fruit",
         Callback = function()
-            log:Push({
-                Tag = "Farm",
-                Text = ("garden  ·  plants %d/300"):format(math.random(180, 300)),
-                Tone = "ok",
-            })
+            cash = cash + math.random(800, 4200)
+            log:Set({ Label = "Cash", Value = money(cash) })
+            log:Push("Sold fruit")
         end,
     })
     status:Button({
-        Title = "Push fail line",
+        Title = "Inventory full",
         Callback = function()
-            log:Push({ Tag = "Fail", Text = "water  ·  dry plot skipped", Tone = "err" })
+            log:Push({ Text = "Inventory full — selling", Tone = "warn" })
         end,
     })
 
     task.spawn(function()
-        local tick = 0
-        while task.wait(5) do
+        while task.wait(6) do
             if not Window.ScreenGui or not Window.ScreenGui.Parent then
                 break
             end
-            tick = tick + 1
-            local plants = math.random(180, 300)
-            log:Push({
-                Tag = "Farm",
-                Text = ("garden  ·  plants %d/300"):format(plants),
-                Tone = plants >= 280 and "warn" or "ok",
-            })
-            if tick % 4 == 0 then
-                log:Push({ Tag = "Check", Text = "seed stock  ·  none tier 0", Tone = "mute" })
-            end
+            cash = cash + math.random(40, 180)
+            log:Set({ Label = "Cash", Value = money(cash) })
         end
     end)
 end
@@ -473,7 +468,7 @@ do
     local demo = Settings:Section({ Title = "NEW · v1.8.3", Icon = "lucide:sparkles" })
     demo:Paragraph({
         Title = "What's new",
-        Content = "Compact rows · charcoal chrome · Notify matches hub · PriorityList without purple ticks",
+            Content = "Compact rows · charcoal · status log (Set + Push) · Notify matches hub",
     })
     demo:Slider({
         Title = "Editable Scale",

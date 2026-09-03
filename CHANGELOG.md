@@ -1,5 +1,16 @@
 # VoidUI Changelog
 
+## 1.9.1 — Status log, not a stream console
+
+`Section:Log` ไม่ได้เป็นแผง STREAM / tag chip / ปุ่ม All-Farm-Fail แล้ว — มันดูเป็น log rejoin ไม่เข้า hub
+
+- **แถวบน = สถานะปัจจุบัน** แบบแถว VoidUI: ชื่อซ้าย ค่าขวา (`Cash` … `$1,240,000`)
+- **ด้านล่าง = Recent** ข้อความเทา บรรทัดใหม่ขึ้นบน ไม่มี timestamp / chip
+- `log:Set({ Label, Value, Tone })` ทับสถานะ · `log:Push("Sold fruit")` ต่อประวัติ
+- `ShowTime = true` ถ้าอยากได้เวลา · `Clear` ลบเฉพาะประวัติ · `Reset` ล้างทั้งคู่
+
+---
+
 ## 1.9.0 — Stream log
 
 Status ไม่ใช่ Paragraph เทาทิ้ง ๆ แล้ว

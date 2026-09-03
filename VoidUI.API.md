@@ -172,22 +172,23 @@ S:Keybind({
 S:Paragraph({ Title = "Note", Icon = "lucide:info", Content = "..." })
 S:Divider()
 
-local log = S:Log({
-  Title = "Stream",
-  Height = 148,
-  Max = 40,
-  Filters = { "All", "Farm", "Check", "Fail" }, -- or true
-})
-log:Push({ Tag = "Farm", Text = "garden  ·  plants 203/300", Tone = "ok" })
-log:Push({ Tag = "Fail", Text = "water skipped", Tone = "err" })
-log:Push("plain info line")
-log:Clear()
-log:Filter("Farm")
+local log = S:Log({ Height = 92, Max = 24 })
+
+-- current state (money, plants, wave) — left label, right value
+log:Set({ Label = "Cash", Value = "$1,240,000" })
+log:Set({ Label = "Garden", Value = "203/300", Tone = "warn" })
+
+-- quiet history under it
+log:Push("Sold fruit")
+log:Push({ Text = "Inventory full — selling", Tone = "warn" })
+log:Clear()   -- history only
+log:Reset()   -- status + history
 ```
 
-`Tone`: `ok` · `err` · `warn` · `mute` — ถ้าไม่ส่ง จะเดาจาก Tag (`Farm`→ok, `Fail`→err, `Captcha`→warn)
-
-แถว: เวลา + chip + ข้อความ ชื่อก่อน ` · ` เป็นตัวหนา
+`Set` ไม่ต่อบรรทัด — มันคือตัวเลข/สถานะที่กำลังเป็นอยู่  
+`Push` คือเหตุการณ์  
+`Tone` ใช้ตอน warn/err จริง ๆ อย่าใส่ chip ให้ทุกบรรทัด  
+`ShowTime = true` ถ้าต้องการเวลาขวา
 
 ---
 
