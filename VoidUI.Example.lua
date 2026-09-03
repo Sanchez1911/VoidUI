@@ -218,22 +218,51 @@ end
 
 do
     local status = pageFarming:Section({ Title = "STATUS" })
-    local para = status:Paragraph({
-        Title = "Live",
-        Content = "Nothing removed | plants: 203/300 | garden full: false | waiting seed: none tier 0",
+    local log = status:Log({
+        Title = "Stream",
+        Height = 156,
+        Max = 40,
+        Filters = { "All", "Farm", "Check", "Fail" },
+    })
+    log:Push({ Tag = "Info", Text = "void " .. VoidUI.Version .. "  ·  ready", Tone = "mute" })
+    log:Push({ Tag = "Farm", Text = "garden  ·  plants 203/300", Tone = "ok" })
+
+    status:Button({
+        Title = "Push farm line",
+        Callback = function()
+            log:Push({
+                Tag = "Farm",
+                Text = ("garden  ·  plants %d/300"):format(math.random(180, 300)),
+                Tone = "ok",
+            })
+        end,
+    })
+    status:Button({
+        Title = "Push fail line",
+        Callback = function()
+            log:Push({ Tag = "Fail", Text = "water  ·  dry plot skipped", Tone = "err" })
+        end,
     })
 
-    -- demo: update status text every few seconds
     task.spawn(function()
+        local tick = 0
         while task.wait(5) do
-            if not Window.ScreenGui or not Window.ScreenGui.Parent then break end
-            para:Set(("plants: %d/300 | garden full: %s | tick: %d"):format(
-                math.random(180, 300),
-                tostring(math.random() > 0.7),
-                os.clock() // 1
-            ))
+            if not Window.ScreenGui or not Window.ScreenGui.Parent then
+                break
+            end
+            tick += 1
+            local plants = math.random(180, 300)
+            log:Push({
+                Tag = "Farm",
+                Text = ("garden  ·  plants %d/300"):format(plants),
+                Tone = plants >= 280 and "warn" or "ok",
+            })
+            if tick % 4 == 0 then
+                log:Push({ Tag = "Check", Text = "seed stock  ·  none tier 0", Tone = "mute" })
+            end
         end
     end)
+end
 
     local limits = pageFarming:Section({ Title = "LIMITS" })
     limits:Dropdown({
@@ -284,6 +313,8 @@ do
             VoidUI:Notify({
                 Title = "Panic",
                 Content = "All loops paused",
+                Tag = "Fail",
+                Tone = "err",
                 Icon = "lucide:octagon-alert",
                 Duration = 2,
             })
@@ -352,6 +383,8 @@ Window:Tab({ Title = "Inventory", Icon = "lucide:backpack" })
             VoidUI:Notify({
                 Title = "VoidUI",
                 Content = "Library ready",
+                Tag = "Info",
+                Tone = "ok",
                 Duration = 3,
             })
 
@@ -536,7 +569,9 @@ end
 
 VoidUI:Notify({
     Title = "VoidUI " .. VoidUI.Version,
-    Content = "Compact · charcoal · matching toast",
+    Content = "Stream log · charcoal · tone rail",
+    Tag = "Launch",
+    Tone = "ok",
     Duration = 3.5,
 })
 

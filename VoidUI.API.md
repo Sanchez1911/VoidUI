@@ -26,8 +26,8 @@ CreateWindow
      └─ Page (subtab / คอลัมน์)
          └─ Section (การ์ด)
              └─ Toggle / Slider / Dropdown / Button / Input / Keybind
-                Paragraph / Divider / PriorityList
-Window: Popup · Search · SetVisible · Toggle · SaveConfig/LoadConfig
+                Paragraph / Log / Divider / PriorityList
+Window: Popup · Search · SetVisible · Toggle · Notify · SaveConfig/LoadConfig
 VoidUI: Notify
 ```
 
@@ -167,11 +167,29 @@ S:Keybind({
 })
 ```
 
-### Paragraph / Divider
+### Paragraph / Divider / Log
 ```lua
 S:Paragraph({ Title = "Note", Icon = "lucide:info", Content = "..." })
 S:Divider()
+
+local log = S:Log({
+  Title = "Stream",
+  Height = 148,
+  Max = 40,
+  Filters = { "All", "Farm", "Check", "Fail" }, -- or true
+})
+log:Push({ Tag = "Farm", Text = "garden  ·  plants 203/300", Tone = "ok" })
+log:Push({ Tag = "Fail", Text = "water skipped", Tone = "err" })
+log:Push("plain info line")
+log:Clear()
+log:Filter("Farm")
 ```
+
+`Tone`: `ok` · `err` · `warn` · `mute` — ถ้าไม่ส่ง จะเดาจาก Tag (`Farm`→ok, `Fail`→err, `Captcha`→warn)
+
+แถว: เวลา + chip + ข้อความ ชื่อก่อน ` · ` เป็นตัวหนา
+
+---
 
 ### PriorityList — ลากเรียงลำดับ
 ```lua
@@ -213,16 +231,19 @@ sec:Toggle({ Title = "Match All", Value = true })
 sec:Button({ Title = "Close", Icon = "lucide:check", Callback = function() pop:Close() end })
 ```
 
-`Popup:Section` ได้ controls ชุดเดียวกับ Section ปกติ
+`Popup:Section` ได้ controls ชุดเดียวกับ Section ปกติ  
+สร้างบน hidden page (`Tab:Page({ Hidden = true })`) — ไม่โผล่เป็น subtab และไม่ไปปนหน้า Auto Join
 
 ---
 
 ## Notify
 
 ```lua
-VoidUI:Notify({ Title=, Content=, Icon=, Duration= })
+VoidUI:Notify({ Title=, Content=, Tag=, Tone=, Icon=, Duration= })
+W:Notify({ Title=, Content=, Tag=, Tone= }) -- uses window accent
 ```
-Icon optional — ไม่ใส่จะได้ hard toast (เส้นม่วงซ้ายอย่างเดียว)
+
+Tag/Tone optional — มีแล้วได้ chip + แถบโทนซ้าย (ไม่ใช่ม่วงตกแต่ง)
 
 ---
 
@@ -242,7 +263,8 @@ Icon optional — ไม่ใส่จะได้ hard toast (เส้นม�
 - [ ] Dropdown มีรูปในรายการ
 - [ ] PriorityList ลากเรียง
 - [ ] Popup settings แยกหน้า
-- [ ] Notify มีไอคอน + timer
+- [ ] Notify มี Tag/Tone + timer
+- [ ] Status ใช้ `Section:Log` ไม่ใช่ Paragraph ทิ้ง ๆ
 - [ ] Config save/load
 
 ดูตัวอย่างครบ: `VoidUI.Example.lua`

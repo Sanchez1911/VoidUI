@@ -1,5 +1,17 @@
 # VoidUI Changelog
 
+## 1.9.0 — Stream log
+
+Status ไม่ใช่ Paragraph เทาทิ้ง ๆ แล้ว
+
+- **`Section:Log`** — แผง STREAM: เวลา + tag chip + แถบโทน 2px + บรรทัดล่าสุด + Clear
+- `log:Push({ Tag, Text, Tone })` · `log:Clear()` · `log:Filter("Farm")` · `Set` ต่อท้ายแบบ Paragraph
+- Tone: `ok` / `err` / `warn` / `mute` — infer จาก Tag ถ้าไม่ส่ง
+- `Filters = { "All", "Farm", "Check", "Fail" }` หรือ `Filters = true`
+- **Notify:** แถบโทน + chip `Tag` · ตัวอักษรเล็กลง · `W:Notify(...)`
+
+---
+
 ## 1.8.5 — Dropdown search + count
 
 - เปิดเมนูแล้วไม่แย่งโฟกัสไปช่องค้นหา — คลิกช่องเองถ้าจะพิมพ์
