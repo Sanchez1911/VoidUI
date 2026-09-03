@@ -217,10 +217,11 @@ do
 end
 
 do
-    local status = pageFarming:Section({ Title = "STATUS" })
-    local log = status:Log({ Height = 92, Max = 24 })
+    local status = pageFarming:Section({ Title = "STATUS", Icon = "lucide:activity" })
+    local log = status:Log({ Height = 100, Max = 20 })
 
-    local cash = 1240000
+    local cash = 1247990
+    local gems = 180695
     local function money(n)
         local s = tostring(math.floor(n))
         local k
@@ -229,22 +230,46 @@ do
         until k == 0
         return "$" .. s
     end
+    local function commas(n)
+        local s = tostring(math.floor(n))
+        local k
+        repeat
+            s, k = s:gsub("^(-?%d+)(%d%d%d)", "%1,%2")
+        until k == 0
+        return s
+    end
 
-    log:Set({ Label = "Cash", Value = money(cash) })
-    log:Push("Garden  ·  203 plants")
+    local function paintBoard()
+        log:Set({
+            { Kind = "head", Icon = "lucide:activity", Label = "Live", Value = "in match" },
+            { Kind = "stat", Icon = "lucide:coins", Label = "Cash", Value = money(cash) },
+            { Kind = "stat", Icon = "lucide:gem", Label = "Gems", Value = commas(gems) },
+            { Kind = "stat", Icon = "lucide:clock", Label = "Uptime", Value = "12m" },
+            { Kind = "sep", Text = "Match" },
+            { Kind = "line", Icon = "lucide:swords", Text = "Wave 10  ·  Yen 1,276  ·  HP 3" },
+            { Kind = "state", Label = "Daily FlowerForest", State = "go" },
+            { Kind = "state", Label = "Weekly SchoolGrounds", State = "done" },
+            { Kind = "sep", Text = "Pool" },
+            { Kind = "item", Icon = "lucide:sparkles", Label = "Secret", Value = "Megumi", Tone = "warn" },
+            { Kind = "item", Icon = "lucide:star", Label = "Mythic", Sub = "Diane · Merlin", Value = "2" },
+        })
+    end
+    paintBoard()
+    log:Push({ Tag = "LAUNCH", Text = "match started" })
+    log:Push({ Tag = "INFO", Text = "Sold fruit" })
 
     status:Button({
         Title = "Sold fruit",
         Callback = function()
             cash = cash + math.random(800, 4200)
-            log:Set({ Label = "Cash", Value = money(cash) })
-            log:Push("Sold fruit")
+            log:Stat("Cash", money(cash))
+            log:Push({ Tag = "INFO", Text = "Sold fruit" })
         end,
     })
     status:Button({
         Title = "Inventory full",
         Callback = function()
-            log:Push({ Text = "Inventory full — selling", Tone = "warn" })
+            log:Push({ Tag = "WARN", Text = "Inventory full — selling" })
         end,
     })
 
@@ -254,7 +279,7 @@ do
                 break
             end
             cash = cash + math.random(40, 180)
-            log:Set({ Label = "Cash", Value = money(cash) })
+            log:Stat("Cash", money(cash))
         end
     end)
 end
@@ -468,7 +493,7 @@ do
     local demo = Settings:Section({ Title = "NEW · v1.8.3", Icon = "lucide:sparkles" })
     demo:Paragraph({
         Title = "What's new",
-            Content = "Compact rows · charcoal · status log (Set + Push) · Notify matches hub",
+            Content = "Status board · lucide stats · activity badges",
     })
     demo:Slider({
         Title = "Editable Scale",

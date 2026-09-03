@@ -1,5 +1,16 @@
 # VoidUI Changelog
 
+## 1.9.2 — Status board (icons + badges)
+
+Log ไม่ใช่ก้อนเทา และไม่ใช่แค่แถว Cash อีกต่อไป — โชว์ overview / challenge / pool / event ในคอนโทรลเดียว
+
+- **Board `Set({...})`:** `stat` (lucide + ชื่อซ้าย ค่าขวา) · `state` (GO/DONE/SKIP/LIMIT) · `head` · `sep` · `item` · `line`
+- **Activity `Push`:** badge แบบ VoidManager (`INFO` / `WARN` / `LAUNCH` / `FAIL`) ไม่ใช่ chip รุงรังทุกบรรทัด
+- `log:Stat("Cash", "$1.2M")` อัปเดตค่าโดยไม่ rebuild ทั้งบอร์ด
+- `Set({ Label, Value })` ยังใช้ได้ — ใส่ไอคอนเหรียญให้
+
+---
+
 ## 1.9.1 — Status log, not a stream console
 
 `Section:Log` ไม่ได้เป็นแผง STREAM / tag chip / ปุ่ม All-Farm-Fail แล้ว — มันดูเป็น log rejoin ไม่เข้า hub

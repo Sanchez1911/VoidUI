@@ -9,7 +9,7 @@
       Page:Section({ Title=..., Icon="rbxassetid://...", TitleSize=, IconSize=, HeaderScale= })
       CreateWindow({ SectionHeader={ TitleSize=14, IconSize=15, Scale=1 } })  -- defaults; override per game
       S:Toggle / Slider / Dropdown / Button / Input / Keybind  — row icons omitted (section header only)
-      S:Log({ Height=, Max= })  log:Set({ Label=, Value= }) / :Push(text) / :Clear()
+      S:Log({ Height= })  log:Set({ {Kind="stat", Icon=, Label=, Value=}, ... }) / :Push({ Tag=, Text= }) / :Stat()
       S:PriorityList({ Values=..., MaxVisible=, RowHeight=, Resizable=true, Callback=fn })
       S:Panel({ Title=, Desc=, Values={{Name,Id,Image,Right,Sub}}, Flag= }) -- progress / item rows
       W:Popup({ Title=..., Size=..., Icon=... })  -- Hidden host page; does not add a Farm subtab
@@ -18,7 +18,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.9.1",
+    Version = "1.9.2",
     _windows = {},
 }
 
@@ -71,7 +71,7 @@ local Fonts = {
 
 local function toneKey(tone)
     tone = string.lower(tostring(tone or "mute"))
-    if tone == "ok" or tone == "success" or tone == "info" or tone == "launch" then
+    if tone == "ok" or tone == "success" or tone == "launch" then
         return "ok"
     elseif tone == "err" or tone == "error" or tone == "fail" or tone == "danger" then
         return "err"
@@ -95,14 +95,38 @@ end
 
 local function inferToneFromTag(tag)
     local tl = string.lower(tostring(tag or ""))
-    if tl == "fail" or tl == "error" or tl == "err" then
+    if tl == "fail" or tl == "error" or tl == "err" or tl == "limit" then
         return "err"
-    elseif tl == "farm" or tl == "launch" or tl == "ok" then
+    elseif tl == "farm" or tl == "launch" or tl == "ok" or tl == "go" or tl == "done" then
         return "ok"
-    elseif tl == "captcha" or tl == "warn" then
+    elseif tl == "captcha" or tl == "warn" or tl == "skip" then
         return "warn"
     end
     return "mute"
+end
+
+local function badgePaint(tag, tone)
+    local key = toneKey(tone or inferToneFromTag(tag))
+    local label = string.upper(tostring(tag or ""))
+    if label == "" then
+        if key == "ok" then
+            label = "OK"
+        elseif key == "err" then
+            label = "FAIL"
+        elseif key == "warn" then
+            label = "WARN"
+        else
+            label = "INFO"
+        end
+    end
+    if key == "ok" then
+        return label, Color3.fromRGB(22, 44, 34), Theme.Success
+    elseif key == "err" then
+        return label, Color3.fromRGB(48, 22, 28), Theme.Danger
+    elseif key == "warn" then
+        return label, Color3.fromRGB(48, 38, 16), Theme.Warn
+    end
+    return label, Color3.fromRGB(30, 30, 34), Theme.TextDim
 end
 
 local function clockNow()
@@ -3059,7 +3083,7 @@ function VoidUI:CreateWindow(cfg)
                 end
 
                 -----------------------------------------------------------------
-                -- Log — live status + quiet history (not a rejoin/console stream)
+                -- Log — stats + state pills + event badges (not a gray dump)
                 -----------------------------------------------------------------
                 function Section:Log(o)
                     o = o or {}
@@ -3068,8 +3092,8 @@ function VoidUI:CreateWindow(cfg)
 
                     local maxLines = math.clamp(math.floor(tonumber(o.Max) or 24), 4, 200)
                     local showTime = o.ShowTime == true or o.Time == true
-                    local historyH = math.clamp(math.floor(tonumber(o.Height) or 88), 48, 320)
-                    local featuredH = 34
+                    local feedH = math.clamp(math.floor(tonumber(o.Height) or 108), 56, 360)
+                    local wantFeed = o.Feed ~= false
 
                     local wrap = mk("Frame", {
                         BackgroundTransparency = 1,
@@ -3079,8 +3103,8 @@ function VoidUI:CreateWindow(cfg)
                         Parent = card,
                     })
                     pad(wrap, 4, 8, 8, 8)
-                    list(wrap, Enum.FillDirection.Vertical, 0)
-                    registerSearch(wrap, o.Title or "Status", "log cash status")
+                    list(wrap, Enum.FillDirection.Vertical, 2)
+                    registerSearch(wrap, o.Title or "Status", "log cash gems status")
 
                     if o.Title then
                         local titleRow = mk("Frame", {
@@ -3089,6 +3113,12 @@ function VoidUI:CreateWindow(cfg)
                             LayoutOrder = 1,
                             Parent = wrap,
                         })
+                        local titleX = 0
+                        if o.Icon then
+                            local ih = makeIcon(titleRow, o.Icon, 14, T.TextDim, 2)
+                            ih.Position = UDim2.fromOffset(0, 2)
+                            titleX = 20
+                        end
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
@@ -3096,243 +3126,502 @@ function VoidUI:CreateWindow(cfg)
                             TextColor3 = T.Text,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             Text = tostring(o.Title),
-                            Size = UDim2.new(1, -44, 1, 0),
+                            Position = UDim2.fromOffset(titleX, 0),
+                            Size = UDim2.new(1, -titleX, 1, 0),
                             Parent = titleRow,
                         })
                     end
 
-                    local featured = mk("Frame", {
-                        BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 0, featuredH),
-                        LayoutOrder = 2,
-                        Parent = wrap,
-                    })
-
-                    local featPip = mk("Frame", {
-                        BackgroundColor3 = T.TextMute,
-                        BackgroundTransparency = 1,
-                        Position = UDim2.fromOffset(0, 14),
-                        Size = UDim2.fromOffset(6, 6),
-                        Parent = featured,
-                    })
-                    corner(featPip, 3)
-
-                    local featLabel = mk("TextLabel", {
-                        BackgroundTransparency = 1,
-                        Font = Fonts.Title,
-                        TextSize = 14,
-                        TextColor3 = T.Text,
-                        TextXAlignment = Enum.TextXAlignment.Left,
-                        TextTruncate = Enum.TextTruncate.AtEnd,
-                        Text = "—",
-                        Position = UDim2.fromOffset(0, 0),
-                        Size = UDim2.new(1, -108, 1, 0),
-                        Parent = featured,
-                    })
-
-                    local featValue = mk("TextLabel", {
-                        BackgroundTransparency = 1,
-                        Font = Fonts.Body,
-                        TextSize = 13,
-                        TextColor3 = T.Text,
-                        TextXAlignment = Enum.TextXAlignment.Right,
-                        TextTruncate = Enum.TextTruncate.AtEnd,
-                        Text = "",
-                        AnchorPoint = Vector2.new(1, 0),
-                        Position = UDim2.new(1, 0, 0, 0),
-                        Size = UDim2.new(0, 100, 1, 0),
-                        Parent = featured,
-                    })
-
-                    mk("Frame", {
-                        BackgroundColor3 = T.Divider,
-                        BorderSizePixel = 0,
-                        Size = UDim2.new(1, 0, 0, 1),
-                        LayoutOrder = 3,
-                        Parent = wrap,
-                    })
-
-                    local histHead = mk("Frame", {
-                        BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 0, 18),
-                        LayoutOrder = 4,
-                        Parent = wrap,
-                    })
-                    mk("TextLabel", {
-                        BackgroundTransparency = 1,
-                        Font = Fonts.Desc,
-                        TextSize = 11,
-                        TextColor3 = T.TextMute,
-                        TextXAlignment = Enum.TextXAlignment.Left,
-                        Text = "Recent",
-                        Size = UDim2.new(1, -44, 1, 0),
-                        Parent = histHead,
-                    })
-                    local clearBtn = mk("TextButton", {
-                        BackgroundTransparency = 1,
-                        Font = Fonts.Body,
-                        TextSize = 11,
-                        TextColor3 = T.TextMute,
-                        Text = "Clear",
-                        AnchorPoint = Vector2.new(1, 0),
-                        Position = UDim2.new(1, 0, 0, 0),
-                        Size = UDim2.new(0, 40, 1, 0),
-                        AutoButtonColor = false,
-                        Parent = histHead,
-                    })
-
-                    local scroll = mk("ScrollingFrame", {
-                        BackgroundTransparency = 1,
-                        BorderSizePixel = 0,
-                        Size = UDim2.new(1, 0, 0, historyH),
-                        CanvasSize = UDim2.fromOffset(0, 0),
-                        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                        ScrollingEnabled = true,
-                        ClipsDescendants = true,
-                        LayoutOrder = 5,
-                        Parent = wrap,
-                    })
-                    styleScroll(scroll)
-
-                    local listFrame = mk("Frame", {
+                    local board = mk("Frame", {
                         BackgroundTransparency = 1,
                         Size = UDim2.new(1, 0, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
-                        Parent = scroll,
+                        LayoutOrder = 2,
+                        Parent = wrap,
                     })
-                    list(listFrame, Enum.FillDirection.Vertical, 0)
+                    list(board, Enum.FillDirection.Vertical, 1)
 
-                    local emptyLbl = mk("TextLabel", {
-                        BackgroundTransparency = 1,
-                        Font = Fonts.Desc,
-                        TextSize = 12,
-                        TextColor3 = T.TextMute,
-                        TextXAlignment = Enum.TextXAlignment.Left,
-                        Text = o.EmptyText or "No activity yet",
-                        Size = UDim2.new(1, 0, 0, 22),
-                        LayoutOrder = 0,
-                        Parent = listFrame,
-                    })
+                    local feedHead
+                    local clearBtn
+                    local scroll
+                    local listFrame
+                    local emptyLbl
 
-                    local entries = {}
+                    if wantFeed then
+                        mk("Frame", {
+                            BackgroundColor3 = T.Divider,
+                            BorderSizePixel = 0,
+                            Size = UDim2.new(1, 0, 0, 1),
+                            LayoutOrder = 3,
+                            Parent = wrap,
+                        })
+                        feedHead = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 18),
+                            LayoutOrder = 4,
+                            Parent = wrap,
+                        })
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Desc,
+                            TextSize = 11,
+                            TextColor3 = T.TextMute,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            Text = o.FeedTitle or "Activity",
+                            Size = UDim2.new(1, -44, 1, 0),
+                            Parent = feedHead,
+                        })
+                        clearBtn = mk("TextButton", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Body,
+                            TextSize = 11,
+                            TextColor3 = T.TextMute,
+                            Text = "Clear",
+                            AnchorPoint = Vector2.new(1, 0),
+                            Position = UDim2.new(1, 0, 0, 0),
+                            Size = UDim2.new(0, 40, 1, 0),
+                            AutoButtonColor = false,
+                            Parent = feedHead,
+                        })
+                        scroll = mk("ScrollingFrame", {
+                            BackgroundTransparency = 1,
+                            BorderSizePixel = 0,
+                            Size = UDim2.new(1, 0, 0, feedH),
+                            CanvasSize = UDim2.fromOffset(0, 0),
+                            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                            ScrollingEnabled = true,
+                            ClipsDescendants = true,
+                            LayoutOrder = 5,
+                            Parent = wrap,
+                        })
+                        styleScroll(scroll)
+                        listFrame = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 0),
+                            AutomaticSize = Enum.AutomaticSize.Y,
+                            Parent = scroll,
+                        })
+                        list(listFrame, Enum.FillDirection.Vertical, 2)
+                        emptyLbl = mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Desc,
+                            TextSize = 12,
+                            TextColor3 = T.TextMute,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            Text = o.EmptyText or "No activity yet",
+                            Size = UDim2.new(1, 0, 0, 20),
+                            LayoutOrder = 0,
+                            Parent = listFrame,
+                        })
+                    end
+
+                    local boardItems = {}
+                    local statIndex = {}
+                    local feedEntries = {}
                     local nextOrder = 0
-                    local featuredLocked = false
 
-                    local function parseEntry(entry)
-                        if type(entry) == "string" then
-                            return {
-                                Label = nil,
-                                Value = nil,
-                                Tag = nil,
-                                Text = entry,
-                                Tone = "mute",
-                                Time = clockNow(),
-                            }
-                        end
-                        entry = entry or {}
-                        local tag = entry.Tag or entry.Kind
-                        if tag ~= nil then
-                            tag = tostring(tag)
-                            if tag == "" or string.lower(tag) == "info" then
-                                tag = nil
-                            end
-                        end
-                        local tone = entry.Tone
-                        if tone == nil and tag then
-                            tone = inferToneFromTag(tag)
-                        end
-                        return {
-                            Label = entry.Label and tostring(entry.Label) or nil,
-                            Value = entry.Value ~= nil and tostring(entry.Value) or nil,
-                            Tag = tag,
-                            Text = tostring(entry.Text or entry.Content or entry.Message or ""),
-                            Tone = tone or "mute",
-                            Time = tostring(entry.Time or clockNow()),
-                        }
-                    end
-
-                    local function paintFeatured(data)
-                        if not data then
-                            featPip.BackgroundTransparency = 1
-                            featLabel.Position = UDim2.fromOffset(0, 0)
-                            featLabel.Size = UDim2.new(1, -108, 1, 0)
-                            featLabel.Text = "—"
-                            featLabel.TextColor3 = T.TextMute
-                            featValue.Text = ""
-                            return
-                        end
-                        local col, key = toneColor(data.Tone)
-                        local hasValue = data.Value and data.Value ~= ""
-                        local label = data.Label
-                        if (not label or label == "") and data.Text ~= "" then
-                            label = data.Text
-                        end
-                        if not label or label == "" then
-                            label = "—"
-                        end
-                        featLabel.Text = label
-                        featLabel.TextColor3 = T.Text
-                        featValue.Text = hasValue and data.Value or ""
-                        if key == "err" then
-                            featValue.TextColor3 = T.Danger
-                            featPip.BackgroundColor3 = T.Danger
-                            featPip.BackgroundTransparency = 0
-                        elseif key == "warn" then
-                            featValue.TextColor3 = T.Warn
-                            featPip.BackgroundColor3 = T.Warn
-                            featPip.BackgroundTransparency = 0
-                        elseif key == "ok" and hasValue then
-                            featValue.TextColor3 = T.Success
-                            featPip.BackgroundTransparency = 1
-                        else
-                            featValue.TextColor3 = T.Text
-                            featPip.BackgroundTransparency = 1
-                        end
-                        local pipOn = featPip.BackgroundTransparency < 1
-                        featLabel.Position = UDim2.fromOffset(pipOn and 12 or 0, 0)
-                        featLabel.Size = UDim2.new(1, (pipOn and -120 or -108), 1, 0)
-                    end
-
-                    local function lineColor(key)
+                    local function valueColor(tone)
+                        local _, key = toneColor(tone)
                         if key == "err" then
                             return T.Danger
                         elseif key == "warn" then
                             return T.Warn
+                        elseif key == "ok" then
+                            return T.Success
                         end
-                        return T.TextMute
+                        return T.Text
                     end
 
-                    local function makeHistoryRow(data)
-                        local _, key = toneColor(data.Tone)
+                    local function makeBadge(parent, tag, tone)
+                        local label, bg, fg = badgePaint(tag, tone)
+                        local w = math.clamp(#label * 7 + 14, 44, 72)
+                        local chip = mk("Frame", {
+                            BackgroundColor3 = bg,
+                            Size = UDim2.fromOffset(w, 16),
+                            Parent = parent,
+                        })
+                        corner(chip, 6)
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Title,
+                            TextSize = 8,
+                            TextColor3 = fg,
+                            Text = label,
+                            Size = UDim2.fromScale(1, 1),
+                            Parent = chip,
+                        })
+                        return chip, w
+                    end
+
+                    local function rowKind(row)
+                        if type(row) ~= "table" then
+                            return "line"
+                        end
+                        local k = string.lower(tostring(row.Kind or row.Type or ""))
+                        if k ~= "" then
+                            return k
+                        end
+                        if row.State then
+                            return "state"
+                        end
+                        if row.Tag then
+                            return "event"
+                        end
+                        if row.Sub then
+                            return "item"
+                        end
+                        if row.Label and row.Value ~= nil then
+                            return "stat"
+                        end
+                        if row.Text == "---" or row.Sep then
+                            return "sep"
+                        end
+                        return "line"
+                    end
+
+                    local function makeHeadRow(data, order)
                         local row = mk("Frame", {
                             BackgroundTransparency = 1,
-                            Size = UDim2.new(1, 0, 0, 20),
-                            LayoutOrder = -nextOrder,
-                            Parent = listFrame,
+                            Size = UDim2.new(1, 0, 0, 32),
+                            LayoutOrder = order,
+                            Parent = board,
                         })
-
-                        local msg = data.Text
-                        if (not msg or msg == "") and data.Label then
-                            if data.Value and data.Value ~= "" then
-                                msg = data.Label .. "  " .. data.Value
-                            else
-                                msg = data.Label
-                            end
+                        local x = 0
+                        if data.Icon then
+                            local ih = makeIcon(row, data.Icon, 16, T.Text, 2)
+                            ih.Position = UDim2.fromOffset(0, 8)
+                            x = 22
                         end
-                        if data.Tag and data.Tag ~= "" then
-                            msg = data.Tag .. "  ·  " .. tostring(msg or "")
-                        end
-
-                        local timeW = showTime and 42 or 0
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Title,
+                            TextSize = 14,
+                            TextColor3 = T.Text,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextTruncate = Enum.TextTruncate.AtEnd,
+                            Text = tostring(data.Label or data.Text or "Live"),
+                            Position = UDim2.fromOffset(x, 0),
+                            Size = UDim2.new(1, -x, 0, 18),
+                            Parent = row,
+                        })
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
                             TextSize = 12,
-                            TextColor3 = lineColor(key),
+                            TextColor3 = T.TextMute,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextTruncate = Enum.TextTruncate.AtEnd,
-                            Text = tostring(msg or ""),
-                            Size = UDim2.new(1, -timeW, 1, 0),
+                            Text = tostring(data.Value or data.Sub or ""),
+                            Position = UDim2.fromOffset(x, 16),
+                            Size = UDim2.new(1, -x, 0, 14),
+                            Parent = row,
+                        })
+                        return row
+                    end
+
+                    local function makeStatRow(data, order)
+                        local row = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 26),
+                            LayoutOrder = order,
+                            Parent = board,
+                        })
+                        local x = 0
+                        local iconImg
+                        if data.Icon then
+                            local ih, img = makeIcon(row, data.Icon, 15, T.TextDim, 2)
+                            ih.Position = UDim2.fromOffset(0, 5)
+                            iconImg = img
+                            x = 22
+                        end
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Body,
+                            TextSize = 13,
+                            TextColor3 = T.TextDim,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextTruncate = Enum.TextTruncate.AtEnd,
+                            Text = tostring(data.Label or ""),
+                            Position = UDim2.fromOffset(x, 0),
+                            Size = UDim2.new(1, -(x + 100), 1, 0),
+                            Parent = row,
+                        })
+                        local valueLbl = mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Title,
+                            TextSize = 13,
+                            TextColor3 = valueColor(data.Tone),
+                            TextXAlignment = Enum.TextXAlignment.Right,
+                            TextTruncate = Enum.TextTruncate.AtEnd,
+                            Text = tostring(data.Value or ""),
+                            AnchorPoint = Vector2.new(1, 0),
+                            Position = UDim2.new(1, 0, 0, 0),
+                            Size = UDim2.new(0, 120, 1, 0),
+                            Parent = row,
+                        })
+                        local key = string.lower(tostring(data.Label or data.Id or ""))
+                        if key ~= "" then
+                            statIndex[key] = { Value = valueLbl, Icon = iconImg, Data = data }
+                        end
+                        return row
+                    end
+
+                    local function makeSepRow(data, order)
+                        local row = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 18),
+                            LayoutOrder = order,
+                            Parent = board,
+                        })
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Title,
+                            TextSize = 11,
+                            TextColor3 = T.TextMute,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            Text = tostring(data.Text or data.Label or data.Title or ""),
+                            Size = UDim2.new(1, 0, 1, 0),
+                            Parent = row,
+                        })
+                        return row
+                    end
+
+                    local function makeLineRow(data, order)
+                        local row = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 20),
+                            LayoutOrder = order,
+                            Parent = board,
+                        })
+                        local x = 0
+                        if data.Icon then
+                            local ih = makeIcon(row, data.Icon, 13, T.TextMute, 2)
+                            ih.Position = UDim2.fromOffset(0, 3)
+                            x = 18
+                        end
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Desc,
+                            TextSize = 12,
+                            TextColor3 = valueColor(data.Tone),
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextTruncate = Enum.TextTruncate.AtEnd,
+                            Text = tostring(data.Text or data.Label or ""),
+                            Position = UDim2.fromOffset(x, 0),
+                            Size = UDim2.new(1, -x, 1, 0),
+                            Parent = row,
+                        })
+                        return row
+                    end
+
+                    local function stateSpec(state)
+                        local s = string.lower(tostring(state or "go"))
+                        if s == "done" or s == "ok" then
+                            return "DONE", T.Success, "lucide:check"
+                        elseif s == "skip" or s == "warn" then
+                            return "SKIP", T.Warn, "lucide:minus"
+                        elseif s == "limit" or s == "err" or s == "fail" then
+                            return "LIMIT", T.Danger, "lucide:ban"
+                        elseif s == "wait" then
+                            return "WAIT", T.TextMute, "lucide:clock"
+                        end
+                        return "GO", T.Success, "lucide:circle"
+                    end
+
+                    local function makeStateRow(data, order)
+                        local pillText, col, iconName = stateSpec(data.State)
+                        local row = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 24),
+                            LayoutOrder = order,
+                            Parent = board,
+                        })
+                        local ih = makeIcon(row, data.Icon or iconName, 13, col, 2)
+                        ih.Position = UDim2.fromOffset(0, 5)
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Body,
+                            TextSize = 13,
+                            TextColor3 = T.Text,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextTruncate = Enum.TextTruncate.AtEnd,
+                            Text = tostring(data.Label or data.Text or ""),
+                            Position = UDim2.fromOffset(20, 0),
+                            Size = UDim2.new(1, -78, 1, 0),
+                            Parent = row,
+                        })
+                        local pill = mk("Frame", {
+                            BackgroundColor3 = col,
+                            BackgroundTransparency = 0.82,
+                            AnchorPoint = Vector2.new(1, 0.5),
+                            Position = UDim2.new(1, 0, 0.5, 0),
+                            Size = UDim2.fromOffset(48, 16),
+                            Parent = row,
+                        })
+                        corner(pill, 7)
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Title,
+                            TextSize = 8,
+                            TextColor3 = col,
+                            Text = pillText,
+                            Size = UDim2.fromScale(1, 1),
+                            Parent = pill,
+                        })
+                        return row
+                    end
+
+                    local function makeItemRow(data, order)
+                        local hasSub = data.Sub and tostring(data.Sub) ~= ""
+                        local row = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, hasSub and 34 or 24),
+                            LayoutOrder = order,
+                            Parent = board,
+                        })
+                        local x = 0
+                        if data.Icon then
+                            local ih = makeIcon(row, data.Icon, 15, T.TextDim, 2)
+                            ih.Position = UDim2.fromOffset(0, hasSub and 8 or 4)
+                            x = 22
+                        end
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Body,
+                            TextSize = 13,
+                            TextColor3 = T.Text,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextTruncate = Enum.TextTruncate.AtEnd,
+                            Text = tostring(data.Label or data.Name or ""),
+                            Position = UDim2.fromOffset(x, hasSub and 1 or 0),
+                            Size = UDim2.new(1, -(x + 64), 0, 16),
+                            Parent = row,
+                        })
+                        if hasSub then
+                            mk("TextLabel", {
+                                BackgroundTransparency = 1,
+                                Font = Fonts.Desc,
+                                TextSize = 11,
+                                TextColor3 = T.TextMute,
+                                TextXAlignment = Enum.TextXAlignment.Left,
+                                TextTruncate = Enum.TextTruncate.AtEnd,
+                                Text = tostring(data.Sub),
+                                Position = UDim2.fromOffset(x, 17),
+                                Size = UDim2.new(1, -(x + 8), 0, 14),
+                                Parent = row,
+                            })
+                        end
+                        if data.Value ~= nil and tostring(data.Value) ~= "" then
+                            mk("TextLabel", {
+                                BackgroundTransparency = 1,
+                                Font = Fonts.Title,
+                                TextSize = 12,
+                                TextColor3 = valueColor(data.Tone),
+                                TextXAlignment = Enum.TextXAlignment.Right,
+                                TextTruncate = Enum.TextTruncate.AtEnd,
+                                Text = tostring(data.Value),
+                                AnchorPoint = Vector2.new(1, 0),
+                                Position = UDim2.new(1, 0, 0, 0),
+                                Size = UDim2.new(0, 72, 0, 16),
+                                Parent = row,
+                            })
+                        end
+                        return row
+                    end
+
+                    local function makeBoardEventRow(data, order)
+                        local row = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 22),
+                            LayoutOrder = order,
+                            Parent = board,
+                        })
+                        local chip, w = makeBadge(row, data.Tag, data.Tone)
+                        chip.Position = UDim2.fromOffset(0, 3)
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Desc,
+                            TextSize = 12,
+                            TextColor3 = T.TextDim,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextTruncate = Enum.TextTruncate.AtEnd,
+                            Text = tostring(data.Text or data.Label or ""),
+                            Position = UDim2.fromOffset(w + 8, 0),
+                            Size = UDim2.new(1, -(w + 8), 1, 0),
+                            Parent = row,
+                        })
+                        return row
+                    end
+
+                    local function clearBoard()
+                        for _, ch in ipairs(board:GetChildren()) do
+                            if ch:IsA("GuiObject") then
+                                ch:Destroy()
+                            end
+                        end
+                        statIndex = {}
+                    end
+
+                    local function paintBoard(rows)
+                        clearBoard()
+                        boardItems = rows
+                        for i, row in ipairs(rows) do
+                            local kind = rowKind(row)
+                            if kind == "head" or kind == "live" then
+                                makeHeadRow(row, i)
+                            elseif kind == "stat" or kind == "kv" then
+                                makeStatRow(row, i)
+                            elseif kind == "sep" or kind == "group" then
+                                makeSepRow(row, i)
+                            elseif kind == "state" then
+                                makeStateRow(row, i)
+                            elseif kind == "item" then
+                                makeItemRow(row, i)
+                            elseif kind == "event" or kind == "log" then
+                                makeBoardEventRow(row, i)
+                            else
+                                makeLineRow(row, i)
+                            end
+                        end
+                    end
+
+                    local function parseFeed(entry)
+                        if type(entry) == "string" then
+                            return { Tag = "INFO", Text = entry, Tone = "mute", Time = clockNow() }
+                        end
+                        entry = entry or {}
+                        local tag = entry.Tag or entry.Kind
+                        if tag == "stat" or tag == "state" or tag == "item" or tag == "sep" or tag == "head" then
+                            tag = "INFO"
+                        end
+                        return {
+                            Tag = tostring(tag or "INFO"),
+                            Text = tostring(entry.Text or entry.Content or entry.Message or entry.Label or ""),
+                            Tone = entry.Tone or inferToneFromTag(tag),
+                            Time = tostring(entry.Time or clockNow()),
+                        }
+                    end
+
+                    local function makeFeedRow(data)
+                        local row = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, 0, 0, 22),
+                            LayoutOrder = -nextOrder,
+                            Parent = listFrame,
+                        })
+                        local chip, w = makeBadge(row, data.Tag, data.Tone)
+                        chip.Position = UDim2.fromOffset(0, 3)
+                        local timeW = showTime and 40 or 0
+                        mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Desc,
+                            TextSize = 12,
+                            TextColor3 = T.TextDim,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextTruncate = Enum.TextTruncate.AtEnd,
+                            Text = data.Text,
+                            Position = UDim2.fromOffset(w + 8, 0),
+                            Size = UDim2.new(1, -(w + 8 + timeW), 1, 0),
                             Parent = row,
                         })
                         if showTime then
@@ -3342,79 +3631,123 @@ function VoidUI:CreateWindow(cfg)
                                 TextSize = 11,
                                 TextColor3 = T.TextMute,
                                 TextXAlignment = Enum.TextXAlignment.Right,
-                                Text = data.Time and string.sub(data.Time, 1, 5) or "",
+                                Text = string.sub(data.Time, 1, 5),
                                 AnchorPoint = Vector2.new(1, 0),
                                 Position = UDim2.new(1, 0, 0, 0),
-                                Size = UDim2.new(0, 40, 1, 0),
+                                Size = UDim2.new(0, 38, 1, 0),
                                 Parent = row,
                             })
                         end
                         return row
                     end
 
-                    paintFeatured(nil)
+                    local function coerceRows(entry)
+                        if type(entry) == "string" then
+                            return { { Kind = "head", Label = entry, Icon = o.Icon or "lucide:activity" } }
+                        end
+                        if type(entry) ~= "table" then
+                            return {}
+                        end
+                        if entry[1] ~= nil then
+                            local rows = {}
+                            for i, v in ipairs(entry) do
+                                if type(v) == "string" then
+                                    rows[i] = { Kind = "line", Text = v }
+                                else
+                                    rows[i] = v
+                                end
+                            end
+                            return rows
+                        end
+                        if entry.Kind or entry.State or entry.Tag or (entry.Label and entry.Value ~= nil) then
+                            if not entry.Kind and entry.Label and entry.Value ~= nil then
+                                local copy = {}
+                                for k, v in pairs(entry) do
+                                    copy[k] = v
+                                end
+                                copy.Kind = "stat"
+                                if not copy.Icon then
+                                    copy.Icon = "lucide:coins"
+                                end
+                                return { copy }
+                            end
+                            return { entry }
+                        end
+                        return { entry }
+                    end
 
                     local api = {}
 
                     function api:Set(entry)
-                        local data = parseEntry(entry)
-                        featuredLocked = true
-                        paintFeatured(data)
-                        return data
+                        paintBoard(coerceRows(entry))
+                        return boardItems
+                    end
+
+                    function api:Stat(label, value, tone)
+                        local rec = statIndex[string.lower(tostring(label or ""))]
+                        if not rec then
+                            return false
+                        end
+                        rec.Value.Text = tostring(value or "")
+                        if tone ~= nil then
+                            rec.Value.TextColor3 = valueColor(tone)
+                        end
+                        rec.Data.Value = tostring(value or "")
+                        return true
                     end
 
                     function api:Push(entry)
-                        local data = parseEntry(entry)
+                        if not wantFeed then
+                            return nil
+                        end
+                        local data = parseFeed(entry)
                         nextOrder = nextOrder + 1
                         emptyLbl.Visible = false
-                        local frame = makeHistoryRow(data)
-                        table.insert(entries, 1, {
-                            Frame = frame,
-                            Data = data,
-                        })
-                        while #entries > maxLines do
-                            local old = table.remove(entries)
+                        local frame = makeFeedRow(data)
+                        table.insert(feedEntries, 1, { Frame = frame, Data = data })
+                        while #feedEntries > maxLines do
+                            local old = table.remove(feedEntries)
                             if old and old.Frame then
                                 old.Frame:Destroy()
                             end
-                        end
-                        if not featuredLocked then
-                            paintFeatured(data)
                         end
                         scroll.CanvasPosition = Vector2.new(0, 0)
                         return data
                     end
 
                     function api:Clear()
-                        for _, e in ipairs(entries) do
+                        if not wantFeed then
+                            return
+                        end
+                        for _, e in ipairs(feedEntries) do
                             if e.Frame then
                                 e.Frame:Destroy()
                             end
                         end
-                        entries = {}
+                        feedEntries = {}
                         nextOrder = 0
                         emptyLbl.Visible = true
                     end
 
                     function api:Reset()
                         api:Clear()
-                        featuredLocked = false
-                        paintFeatured(nil)
+                        paintBoard({})
                     end
 
                     function api:Filter(_)
-                        -- kept so 1.9.0 callers don't error; status log is not a stream filter
                     end
 
-                    clearBtn.MouseButton1Click:Connect(function()
-                        api:Clear()
-                    end)
-                    clearBtn.MouseEnter:Connect(function()
-                        clearBtn.TextColor3 = T.Text
-                    end)
-                    clearBtn.MouseLeave:Connect(function()
-                        clearBtn.TextColor3 = T.TextMute
-                    end)
+                    if clearBtn then
+                        clearBtn.MouseButton1Click:Connect(function()
+                            api:Clear()
+                        end)
+                        clearBtn.MouseEnter:Connect(function()
+                            clearBtn.TextColor3 = T.Text
+                        end)
+                        clearBtn.MouseLeave:Connect(function()
+                            clearBtn.TextColor3 = T.TextMute
+                        end)
+                    end
 
                     if o.Flag then
                         Window._flags[o.Flag] = api

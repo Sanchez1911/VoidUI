@@ -172,23 +172,27 @@ S:Keybind({
 S:Paragraph({ Title = "Note", Icon = "lucide:info", Content = "..." })
 S:Divider()
 
-local log = S:Log({ Height = 92, Max = 24 })
+local log = S:Log({ Height = 100, Max = 24 })
 
--- current state (money, plants, wave) — left label, right value
-log:Set({ Label = "Cash", Value = "$1,240,000" })
-log:Set({ Label = "Garden", Value = "203/300", Tone = "warn" })
+log:Set({
+  { Kind = "head", Icon = "lucide:activity", Label = "Live", Value = "in match" },
+  { Kind = "stat", Icon = "lucide:coins", Label = "Cash", Value = "$1,247,990" },
+  { Kind = "stat", Icon = "lucide:gem", Label = "Gems", Value = "180,695" },
+  { Kind = "sep", Text = "Match" },
+  { Kind = "line", Icon = "lucide:swords", Text = "Wave 10  ·  Yen 1,276  ·  HP 3" },
+  { Kind = "state", Label = "Daily FlowerForest", State = "go" },   -- go done skip limit
+  { Kind = "item", Icon = "lucide:sparkles", Label = "Secret", Value = "Megumi", Tone = "warn" },
+})
 
--- quiet history under it
-log:Push("Sold fruit")
-log:Push({ Text = "Inventory full — selling", Tone = "warn" })
-log:Clear()   -- history only
-log:Reset()   -- status + history
+log:Stat("Cash", "$1,250,000")
+log:Push({ Tag = "INFO", Text = "Sold fruit" })
+log:Push({ Tag = "WARN", Text = "Inventory full — selling" })
+log:Push({ Tag = "LAUNCH", Text = "match started" })
 ```
 
-`Set` ไม่ต่อบรรทัด — มันคือตัวเลข/สถานะที่กำลังเป็นอยู่  
-`Push` คือเหตุการณ์  
-`Tone` ใช้ตอน warn/err จริง ๆ อย่าใส่ chip ให้ทุกบรรทัด  
-`ShowTime = true` ถ้าต้องการเวลาขวา
+`Set` = snapshot ของเกม (overview / pool / challenge)  
+`Push` = เหตุการณ์ มี badge สี  
+`Feed = false` ถ้าต้องการแค่บอร์ด ไม่เอา activity
 
 ---
 
