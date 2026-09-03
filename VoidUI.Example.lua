@@ -218,7 +218,7 @@ end
 
 do
     local status = pageFarming:Section({ Title = "STATUS", Icon = "lucide:activity" })
-    local log = status:Log({ Height = 100, Max = 20 })
+    local log = status:Log({ Height = 116, Max = 20 })
 
     local cash = 1247990
     local gems = 180695

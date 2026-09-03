@@ -1,5 +1,16 @@
 # VoidUI Changelog
 
+## 1.9.3 — Sharper type + filled activity badges
+
+ตัดความนุ่มที่ทำให้ดู AI: คอนทราสต์ขึ้น · ตัวหนังสือมี stroke บาง · badge ทึบตัวเข้ม
+
+- **Activity:** กล่องแยก + เวลา + รางโทน 2px + badge ทึบ (WARN ทอง / LAUNCH เขียว / INFO ขาวบนเทา) · hover แถว
+- **State:** GO เส้นขอบ · DONE ทึบตัวเข้ม — ไม่ใช่ pill จาง
+- **ค่าเงิน/เลข:** ขาวจัด + GothamBold 14
+- Theme เทาขึ้นนิด (TextDim/Stroke) ทั้งฮับให้อ่านคมขึ้น
+
+---
+
 ## 1.9.2 — Status board (icons + badges)
 
 Log ไม่ใช่ก้อนเทา และไม่ใช่แค่แถว Cash อีกต่อไป — โชว์ overview / challenge / pool / event ในคอนโทรลเดียว

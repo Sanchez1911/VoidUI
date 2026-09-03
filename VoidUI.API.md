@@ -191,7 +191,7 @@ log:Push({ Tag = "LAUNCH", Text = "match started" })
 ```
 
 `Set` = snapshot ของเกม (overview / pool / challenge)  
-`Push` = เหตุการณ์ มี badge สี  
+`Push` = เหตุการณ์ มี badge ทึบ + เวลา (ปิดด้วย `ShowTime = false`)  
 `Feed = false` ถ้าต้องการแค่บอร์ด ไม่เอา activity
 
 ---
