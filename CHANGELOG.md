@@ -1,5 +1,13 @@
 # VoidUI Changelog
 
+## 1.9.4 — Full-width dropdown + quieter activity rows
+
+- **Dropdown:** ชื่ออยู่บน ช่องกว้างเต็มแถว — ไม่ใช่กล่องขวา 136px ที่ตัด `Baek Human...`
+- เมนูกว้างตามชื่อยาวที่สุด (260–460) · ชื่อยาวขึ้นบรรทัดใหม่ในลิสต์
+- **Activity:** ไม่ซ้ำ pill WARN แล้ว — แถวแบบ settings: ไอคอนโทน + ข้อความ + เวลา/tag บรรทัดรอง
+
+---
+
 ## 1.9.3 — Sharper type + filled activity badges
 
 ตัดความนุ่มที่ทำให้ดู AI: คอนทราสต์ขึ้น · ตัวหนังสือมี stroke บาง · badge ทึบตัวเข้ม

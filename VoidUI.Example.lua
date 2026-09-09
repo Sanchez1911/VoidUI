@@ -287,6 +287,21 @@ end
 do
     local limits = pageFarming:Section({ Title = "LIMITS" })
     limits:Dropdown({
+        Title = "Unit",
+        Desc = "Full-width field — long names stay readable",
+        Values = {
+            "Ace (Acer)",
+            "Ainz (Ais)",
+            "Aizen (Final) (Aisen)",
+            "Aizen (Transcendent)",
+            "Akainu (Akeno)",
+            "Baek Human (Baek Yunho)",
+        },
+        Value = "Baek Human (Baek Yunho)",
+        Flag = "demoUnitLong",
+        Callback = function(v) print("unit", v) end,
+    })
+    limits:Dropdown({
         Title = "Plant count cap",
         Desc = "Stop planting above this count",
         Values = { "100", "200", "300", "400", "500" },
