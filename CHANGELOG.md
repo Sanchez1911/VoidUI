@@ -1,5 +1,15 @@
 # VoidUI Changelog
 
+## 1.9.5 — Dropdown collapse + Status flicker
+
+1.9.4 ทำให้หน้าว่าง / UI กระพริบขยับเอง
+
+- **Dropdown:** เอา `hitBg` ออกจาก `UIListLayout` + `AutomaticSize.Y` — แถวไม่ยุบสูง 0 (Training / Auto Quest ว่าง)
+- **Log `Set`:** โครงเดิมอัปเดตข้อความในที่เดิม ไม่ destroy/rebuild ทั้งบอร์ดทุก tick
+- **Page canvas:** ไม่เขียน `CanvasSize` ซ้ำถ้าความสูงไม่เปลี่ยน — กันทั้งหน้ากระตุกตาม AbsoluteSize
+
+---
+
 ## 1.9.4 — Full-width dropdown + quieter activity rows
 
 - **Dropdown:** ชื่ออยู่บน ช่องกว้างเต็มแถว — ไม่ใช่กล่องขวา 136px ที่ตัด `Baek Human...`

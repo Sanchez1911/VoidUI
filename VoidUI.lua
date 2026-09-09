@@ -18,7 +18,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.9.4",
+    Version = "1.9.5",
     _windows = {},
 }
 
@@ -1766,8 +1766,14 @@ function VoidUI:CreateWindow(cfg)
                 AutomaticSize = Enum.AutomaticSize.Y,
                 Parent = frame,
             })
+            local lastCanvasY = -1
             local function updateCanvas()
-                frame.CanvasSize = UDim2.fromOffset(0, 12 + body.AbsoluteSize.Y + 48)
+                local y = math.max(0, math.floor(12 + body.AbsoluteSize.Y + 48))
+                if y == lastCanvasY then
+                    return
+                end
+                lastCanvasY = y
+                frame.CanvasSize = UDim2.fromOffset(0, y)
             end
             body:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateCanvas)
             task.defer(updateCanvas)
@@ -2258,6 +2264,7 @@ function VoidUI:CreateWindow(cfg)
 
                     addDivider()
                     rowOrder = rowOrder + 1
+                    -- hitBg must NOT sit in UIListLayout + AutomaticSize (collapses / flickers)
                     local row = mk("Frame", {
                         BackgroundTransparency = 1,
                         Size = UDim2.new(1, 0, 0, 0),
@@ -2267,23 +2274,16 @@ function VoidUI:CreateWindow(cfg)
                         Parent = card,
                     })
                     pad(row, 8, 10, 10, 10)
-                    list(row, Enum.FillDirection.Vertical, 6)
                     registerSearch(row, o.Title, o.Desc)
 
-                    local hitBg = mk("Frame", {
-                        BackgroundColor3 = T.BgHover,
+                    local body = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 1, 0),
-                        ZIndex = 0,
+                        Size = UDim2.new(1, 0, 0, 0),
+                        AutomaticSize = Enum.AutomaticSize.Y,
+                        ZIndex = 1,
                         Parent = row,
                     })
-                    corner(hitBg, rCtrl)
-                    row.MouseEnter:Connect(function()
-                        tween(hitBg, TI(0.1), { BackgroundTransparency = 0.9 })
-                    end)
-                    row.MouseLeave:Connect(function()
-                        tween(hitBg, TI(0.1), { BackgroundTransparency = 1 })
-                    end)
+                    list(body, Enum.FillDirection.Vertical, 6)
 
                     crisp(mk("TextLabel", {
                         BackgroundTransparency = 1,
@@ -2293,7 +2293,7 @@ function VoidUI:CreateWindow(cfg)
                         TextXAlignment = Enum.TextXAlignment.Left,
                         Text = o.Title or "Dropdown",
                         Size = UDim2.new(1, 0, 0, 18),
-                        Parent = row,
+                        Parent = body,
                     }), 0.72)
                     if not compactOn and o.Desc and o.Desc ~= "" then
                         mk("TextLabel", {
@@ -2306,7 +2306,7 @@ function VoidUI:CreateWindow(cfg)
                             Text = o.Desc,
                             Size = UDim2.new(1, 0, 0, 0),
                             AutomaticSize = Enum.AutomaticSize.Y,
-                            Parent = row,
+                            Parent = body,
                         })
                     end
 
@@ -2315,7 +2315,7 @@ function VoidUI:CreateWindow(cfg)
                         AutoButtonColor = false,
                         Text = "",
                         Size = UDim2.new(1, 0, 0, 34),
-                        Parent = row,
+                        Parent = body,
                     })
                     corner(box, rCtrl)
                     stroke(box, T.Stroke, 1, 0.28)
@@ -3308,6 +3308,8 @@ function VoidUI:CreateWindow(cfg)
                     end
 
                     local boardItems = {}
+                    local boardFrames = {}
+                    local boardSig = ""
                     local statIndex = {}
                     local feedEntries = {}
                     local nextOrder = 0
@@ -3388,6 +3390,7 @@ function VoidUI:CreateWindow(cfg)
                             x = 22
                         end
                         crisp(mk("TextLabel", {
+                            Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
                             TextSize = 15,
@@ -3400,6 +3403,7 @@ function VoidUI:CreateWindow(cfg)
                             Parent = row,
                         }), 0.7)
                         mk("TextLabel", {
+                            Name = "Value",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
                             TextSize = 12,
@@ -3430,6 +3434,7 @@ function VoidUI:CreateWindow(cfg)
                             x = 22
                         end
                         mk("TextLabel", {
+                            Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
                             TextSize = 13,
@@ -3442,6 +3447,7 @@ function VoidUI:CreateWindow(cfg)
                             Parent = row,
                         })
                         local valueLbl = crisp(mk("TextLabel", {
+                            Name = "Value",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
                             TextSize = 14,
@@ -3469,6 +3475,7 @@ function VoidUI:CreateWindow(cfg)
                             Parent = board,
                         })
                         crisp(mk("TextLabel", {
+                            Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
                             TextSize = 11,
@@ -3495,6 +3502,7 @@ function VoidUI:CreateWindow(cfg)
                             x = 18
                         end
                         crisp(mk("TextLabel", {
+                            Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
                             TextSize = 12,
@@ -3535,6 +3543,7 @@ function VoidUI:CreateWindow(cfg)
                         local ih = makeIcon(row, data.Icon or iconName, 13, col, 2)
                         ih.Position = UDim2.fromOffset(0, 5)
                         crisp(mk("TextLabel", {
+                            Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
                             TextSize = 13,
@@ -3547,6 +3556,7 @@ function VoidUI:CreateWindow(cfg)
                             Parent = row,
                         }), 0.72)
                         local pill = mk("Frame", {
+                            Name = "Pill",
                             BackgroundColor3 = col,
                             BackgroundTransparency = filled and 0 or 1,
                             AnchorPoint = Vector2.new(1, 0.5),
@@ -3557,6 +3567,7 @@ function VoidUI:CreateWindow(cfg)
                         corner(pill, 4)
                         stroke(pill, col, 1, filled and 1 or 0.05)
                         crisp(mk("TextLabel", {
+                            Name = "Text",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
                             TextSize = 9,
@@ -3583,6 +3594,7 @@ function VoidUI:CreateWindow(cfg)
                             x = 22
                         end
                         mk("TextLabel", {
+                            Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
                             TextSize = 13,
@@ -3596,6 +3608,7 @@ function VoidUI:CreateWindow(cfg)
                         })
                         if hasSub then
                             mk("TextLabel", {
+                                Name = "Sub",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Desc,
                                 TextSize = 11,
@@ -3610,6 +3623,7 @@ function VoidUI:CreateWindow(cfg)
                         end
                         if data.Value ~= nil and tostring(data.Value) ~= "" then
                             crisp(mk("TextLabel", {
+                                Name = "Value",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Title,
                                 TextSize = 13,
@@ -3636,6 +3650,7 @@ function VoidUI:CreateWindow(cfg)
                         local chip, w = makeBadge(row, data.Tag, data.Tone)
                         chip.Position = UDim2.fromOffset(0, 3)
                         crisp(mk("TextLabel", {
+                            Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
                             TextSize = 12,
@@ -3657,28 +3672,121 @@ function VoidUI:CreateWindow(cfg)
                             end
                         end
                         statIndex = {}
+                        boardFrames = {}
+                        boardSig = ""
+                    end
+
+                    local function structureSig(rows)
+                        local parts = {}
+                        for i, data in ipairs(rows) do
+                            local kind = rowKind(data)
+                            if kind == "line" or kind == "event" or kind == "log" then
+                                parts[i] = kind
+                            elseif kind == "item" then
+                                local extra = (data.Sub and tostring(data.Sub) ~= "") and "+s" or ""
+                                if data.Value ~= nil and tostring(data.Value) ~= "" then
+                                    extra = extra .. "+v"
+                                end
+                                parts[i] = kind .. ":" .. tostring(data.Label or data.Name or "") .. extra
+                            else
+                                parts[i] = kind .. ":" .. tostring(data.Label or data.Text or data.Title or "")
+                            end
+                        end
+                        return table.concat(parts, "/")
+                    end
+
+                    local function setNamed(frame, name, text, color)
+                        local label = frame and frame:FindFirstChild(name)
+                        if not label or not label:IsA("TextLabel") then
+                            return
+                        end
+                        label.Text = tostring(text or "")
+                        if color then
+                            label.TextColor3 = color
+                        end
+                    end
+
+                    local function applyRow(kind, frame, data)
+                        if not frame then
+                            return
+                        end
+                        if kind == "head" or kind == "live" then
+                            setNamed(frame, "Label", data.Label or data.Text)
+                            setNamed(frame, "Value", data.Value or data.Sub)
+                        elseif kind == "stat" or kind == "kv" then
+                            setNamed(frame, "Label", data.Label)
+                            setNamed(frame, "Value", data.Value, valueColor(data.Tone))
+                            local key = string.lower(tostring(data.Label or data.Id or ""))
+                            if key ~= "" and statIndex[key] then
+                                statIndex[key].Data = data
+                            end
+                        elseif kind == "sep" or kind == "group" then
+                            setNamed(frame, "Label", string.upper(tostring(data.Text or data.Label or data.Title or "")))
+                        elseif kind == "state" then
+                            setNamed(frame, "Label", data.Label or data.Text)
+                            local pillText, col = stateSpec(data.State)
+                            local filled = pillText == "DONE" or pillText == "LIMIT"
+                            local pill = frame:FindFirstChild("Pill")
+                            if pill then
+                                pill.BackgroundColor3 = col
+                                pill.BackgroundTransparency = filled and 0 or 1
+                                local st = pill:FindFirstChildOfClass("UIStroke")
+                                if st then
+                                    st.Color = col
+                                    st.Transparency = filled and 1 or 0.05
+                                end
+                                local t = pill:FindFirstChild("Text")
+                                if t and t:IsA("TextLabel") then
+                                    t.Text = pillText
+                                    t.TextColor3 = filled and Color3.fromRGB(10, 12, 14) or col
+                                end
+                            end
+                        elseif kind == "item" then
+                            setNamed(frame, "Label", data.Label or data.Name)
+                            setNamed(frame, "Sub", data.Sub)
+                            if data.Value ~= nil then
+                                setNamed(frame, "Value", data.Value, valueColor(data.Tone))
+                            end
+                        elseif kind == "event" or kind == "log" then
+                            setNamed(frame, "Label", data.Text or data.Label)
+                        else
+                            setNamed(frame, "Label", data.Text or data.Label, data.Tone and valueColor(data.Tone) or nil)
+                        end
+                    end
+
+                    local function spawnRow(data, order)
+                        local kind = rowKind(data)
+                        if kind == "head" or kind == "live" then
+                            return makeHeadRow(data, order)
+                        elseif kind == "stat" or kind == "kv" then
+                            return makeStatRow(data, order)
+                        elseif kind == "sep" or kind == "group" then
+                            return makeSepRow(data, order)
+                        elseif kind == "state" then
+                            return makeStateRow(data, order)
+                        elseif kind == "item" then
+                            return makeItemRow(data, order)
+                        elseif kind == "event" or kind == "log" then
+                            return makeBoardEventRow(data, order)
+                        end
+                        return makeLineRow(data, order)
                     end
 
                     local function paintBoard(rows)
+                        rows = rows or {}
+                        local sig = structureSig(rows)
+                        if sig == boardSig and #boardFrames == #rows then
+                            boardItems = rows
+                            for i, data in ipairs(rows) do
+                                applyRow(rowKind(data), boardFrames[i], data)
+                            end
+                            return
+                        end
                         clearBoard()
                         boardItems = rows
-                        for i, row in ipairs(rows) do
-                            local kind = rowKind(row)
-                            if kind == "head" or kind == "live" then
-                                makeHeadRow(row, i)
-                            elseif kind == "stat" or kind == "kv" then
-                                makeStatRow(row, i)
-                            elseif kind == "sep" or kind == "group" then
-                                makeSepRow(row, i)
-                            elseif kind == "state" then
-                                makeStateRow(row, i)
-                            elseif kind == "item" then
-                                makeItemRow(row, i)
-                            elseif kind == "event" or kind == "log" then
-                                makeBoardEventRow(row, i)
-                            else
-                                makeLineRow(row, i)
-                            end
+                        boardSig = sig
+                        for i, data in ipairs(rows) do
+                            boardFrames[i] = spawnRow(data, i)
                         end
                     end
 
