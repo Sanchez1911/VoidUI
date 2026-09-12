@@ -1,5 +1,17 @@
 # VoidUI Changelog
 
+## 1.9.10 — restore weight (no shrink)
+
+1.9.9 ย่อจนเหลือรูดำล่าง + ตัวบาง — คืนสัดส่วน โครงเดิม
+
+- แถวตัวเลือกสูง 40 · ช่องในการ์ด 12 · การ์ดยืดเต็มความสูงหน้า
+- ป้าย GothamBold 13 ขาวทึบ · หัวหมวด Bold 12 (`180,185,200`) ไม่เว้นวรรค
+- Toggle 42×22 knob 18 · ON `150,85,255`
+- Slider ราง 6 thumb 14 · badge Bold 12
+- Dropdown สูง 36 · GothamBold 12
+
+---
+
 ## 1.9.9 — 1.9.5 polish (purple, same layout)
 
 โครงเดิม · ม่วงเดิม · แค่คมขึ้น
