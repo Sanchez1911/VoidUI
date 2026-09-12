@@ -1,41 +1,8 @@
 # VoidUI Changelog
 
-## 1.9.8 — AAA hub cards (Vanguards / Liquid)
+## 1.9.5 — current (1.9.6–1.9.8 reverted)
 
-ชั้นภาพใหม่: การ์ดยกพื้น · ตัวหนังสือคม · คอนโทรลเล็กลง
-
-- Type: label ขาว `245,247,250` 13px · หัวหมวด Bold ขาว + ไอคอน 16 · subtext slate `148,163,184` ไม่โปร่ง
-- การ์ดเซคชัน `20,22,29` มุม 8 · stroke `35,39,52` 0.4 · pad 10 · ช่อง 6
-- แถว hover ไป `27,30,40` ใน 0.15s Quad
-- Toggle 36×20 knob 16 · slider ราง 4px + pill ค่า · dropdown สูง 32
-- Status การ์ดใน + จุดเขียว Live กระพริบ
-- Accent `#F59E0B`
-
----
-
-## 1.9.7 — Codes-list gold (Redeem ref)
-
-โทนตามหน้า Codes: พื้นดำลึก · แถวลิสต์เรียบ · ปุ่มทอง
-
-- Accent ทอง `#ECC44A` · ตัวบนปุ่มสีเข้ม · เส้นทอง 2px บนหน้าต่าง
-- ตัดการ์ดซ้อนในเซคชัน — เหลือเส้นคั่นบางระหว่างแถว
-- หัวหมวดตัวเล็กสีเทาแบบ `READY FOR YOU`
-- Button แถวซ้าย + pill ทองขวา (`Action` / ค่าเริ่ม `GO`)
-- Toggle / slider / selected ใช้ทองแทนม่วง
-- Search placeholder: `Search everything...`
-
----
-
-## 1.9.6 — RATF Suite control polish
-
-โครงแท็บ/เลย์เอาต์เท่าเดิม — เก็บรายละเอียดให้เรียบ
-
-- **Toggle:** 36×18 · knob 14px เว้น 2px · tween 0.15s Quad Out · ON `#8A3FFC` / OFF `#2A2B33`
-- **Rows:** สูง 36px ตอนไม่มี desc · พื้น `#191A20` มุม 4px · หัวหมวดมีเส้น 1px ใต้ชื่อ
-- **Dropdown:** stroke `#323241` · เงาอ่อน · แถวที่เลือกพื้นม่วงโปร่ง · scrollbar 3px `#555`
-- **Slider:** รางสูง 4px ปลายมน · กล่องค่า pill · thumb มีขอบ
-- **Status:** การ์ด `#14151B` มุม 6px · label เทา `#8E92A0` · ค่าขาว
-- **Search:** มุม 6px · `Search options...` · ไอคอน 14px
+ย้อนกลับมา 1.9.5 ตามที่ใช้อยู่ — ตัดโทนทอง / การ์ด AAA / polish ที่ทำหลังนี้ทิ้ง
 
 ---
 
