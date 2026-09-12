@@ -1,5 +1,18 @@
 # VoidUI Changelog
 
+## 1.9.6 — RATF Suite control polish
+
+โครงแท็บ/เลย์เอาต์เท่าเดิม — เก็บรายละเอียดให้เรียบ
+
+- **Toggle:** 36×18 · knob 14px เว้น 2px · tween 0.15s Quad Out · ON `#8A3FFC` / OFF `#2A2B33`
+- **Rows:** สูง 36px ตอนไม่มี desc · พื้น `#191A20` มุม 4px · หัวหมวดมีเส้น 1px ใต้ชื่อ
+- **Dropdown:** stroke `#323241` · เงาอ่อน · แถวที่เลือกพื้นม่วงโปร่ง · scrollbar 3px `#555`
+- **Slider:** รางสูง 4px ปลายมน · กล่องค่า pill · thumb มีขอบ
+- **Status:** การ์ด `#14151B` มุม 6px · label เทา `#8E92A0` · ค่าขาว
+- **Search:** มุม 6px · `Search options...` · ไอคอน 14px
+
+---
+
 ## 1.9.5 — Dropdown collapse + Status flicker
 
 1.9.4 ทำให้หน้าว่าง / UI กระพริบขยับเอง
