@@ -1,33 +1,8 @@
 # VoidUI Changelog
 
-## 1.9.10 — restore weight (no shrink)
+## 1.9.5 — current (1.9.6–1.9.10 reverted)
 
-1.9.9 ย่อจนเหลือรูดำล่าง + ตัวบาง — คืนสัดส่วน โครงเดิม
-
-- แถวตัวเลือกสูง 40 · ช่องในการ์ด 12 · การ์ดยืดเต็มความสูงหน้า
-- ป้าย GothamBold 13 ขาวทึบ · หัวหมวด Bold 12 (`180,185,200`) ไม่เว้นวรรค
-- Toggle 42×22 knob 18 · ON `150,85,255`
-- Slider ราง 6 thumb 14 · badge Bold 12
-- Dropdown สูง 36 · GothamBold 12
-
----
-
-## 1.9.9 — 1.9.5 polish (purple, same layout)
-
-โครงเดิม · ม่วงเดิม · แค่คมขึ้น
-
-- Type: label ขาว 12 · หัวหมวดในไพ่ Bold 11 uppercase slate · title 14 / subtitle 11
-- การ์ด `20,22,29` มุม 8 · stroke `36,40,52` 0.3 · pad 12 · ช่อง 8
-- Toggle 34×18 knob 14 · ON `#8C50FF` · tween 0.16 Quad Out
-- Slider pill ค่า · ราง 4px · thumb 10
-- Dropdown สูง 32 · แถวเมนู 30 · hover `32,35,48`
-- Sidebar active ม่วง · icon เทา → ขาวตอน hover
-
----
-
-## 1.9.5 — current (1.9.6–1.9.8 reverted)
-
-ย้อนกลับมา 1.9.5 ตามที่ใช้อยู่ — ตัดโทนทอง / การ์ด AAA / polish ที่ทำหลังนี้ทิ้ง
+ย้อนกลับมา 1.9.5 ตามที่ใช้อยู่ — ตัด 1.9.6–1.9.10 ทิ้งทั้งหมด
 
 ---
 
