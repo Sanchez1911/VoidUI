@@ -1,5 +1,18 @@
 # VoidUI Changelog
 
+## 1.9.8 — AAA hub cards (Vanguards / Liquid)
+
+ชั้นภาพใหม่: การ์ดยกพื้น · ตัวหนังสือคม · คอนโทรลเล็กลง
+
+- Type: label ขาว `245,247,250` 13px · หัวหมวด Bold ขาว + ไอคอน 16 · subtext slate `148,163,184` ไม่โปร่ง
+- การ์ดเซคชัน `20,22,29` มุม 8 · stroke `35,39,52` 0.4 · pad 10 · ช่อง 6
+- แถว hover ไป `27,30,40` ใน 0.15s Quad
+- Toggle 36×20 knob 16 · slider ราง 4px + pill ค่า · dropdown สูง 32
+- Status การ์ดใน + จุดเขียว Live กระพริบ
+- Accent `#F59E0B`
+
+---
+
 ## 1.9.7 — Codes-list gold (Redeem ref)
 
 โทนตามหน้า Codes: พื้นดำลึก · แถวลิสต์เรียบ · ปุ่มทอง
