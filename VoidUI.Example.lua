@@ -4,7 +4,7 @@
 ]]
 
 -- HARD cache-bust: pin commit SHA (query ?v= อย่างเดียวไม่พอบน executor หลายตัว)
-local VOIDUI_SHA = "866fe217ba107ef8d87e8eff910a96240e8d91a1"
+local VOIDUI_SHA = "ccc564dcb8677965075fd6a5f5ffdf09fd923a04"
 local VOIDUI_URL = "https://raw.githubusercontent.com/Sanchez1911/VoidUI/" .. VOIDUI_SHA .. "/VoidUI.lua"
 
 local function loadLib()
@@ -44,7 +44,7 @@ local Window = VoidUI:CreateWindow({
     Title = "voidw0rld",
     Author = "discord.gg/voidw0rld",
     Icon = "rbxassetid://111627748770819", -- hub logo (Tap Sim / brand)
-    Accent = Color3.fromRGB(140, 80, 255), -- electric violet
+    Accent = Color3.fromRGB(150, 85, 255), -- vivid purple
     Size = UDim2.fromOffset(720, 560),
     Transparency = 0.06,
     Bloom = false,
