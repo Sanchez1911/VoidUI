@@ -18,7 +18,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.9.6",
+    Version = "1.9.7",
     _windows = {},
 }
 
@@ -38,26 +38,27 @@ local Mouse = LP:GetMouse()
 -- Theme
 ---------------------------------------------------------------------------
 local Theme = {
-    -- Neutral charcoal. Accent is brand — use only for ON / selected / fill.
-    Accent = Color3.fromRGB(138, 63, 252), -- #8A3FFC
-    AccentHi = Color3.fromRGB(165, 96, 255), -- #A560FF
-    AccentDim = Color3.fromRGB(124, 58, 210),
-    Bg = Color3.fromRGB(16, 16, 18),
-    BgPanel = Color3.fromRGB(20, 20, 22),
-    BgSidebar = Color3.fromRGB(14, 14, 16),
-    BgSection = Color3.fromRGB(24, 24, 27),
-    BgHover = Color3.fromRGB(36, 36, 40),
-    BgInput = Color3.fromRGB(18, 18, 20),
-    BgRow = Color3.fromRGB(25, 26, 32),
-    BgStatus = Color3.fromRGB(20, 21, 27),
-    BgToggleOff = Color3.fromRGB(42, 43, 51), -- #2A2B33
-    Stroke = Color3.fromRGB(58, 58, 64),
-    MenuStroke = Color3.fromRGB(50, 52, 65),
-    Divider = Color3.fromRGB(52, 52, 58),
-    Text = Color3.fromRGB(255, 255, 255),
-    TextDim = Color3.fromRGB(184, 184, 192),
-    TextMute = Color3.fromRGB(142, 146, 160), -- #8E92A0
-    LabelMute = Color3.fromRGB(142, 146, 160),
+    -- Codes-list: deep black + gold CTA (Redeem). Accent only on ON / selected / pills.
+    Accent = Color3.fromRGB(236, 196, 74),
+    AccentHi = Color3.fromRGB(250, 214, 96),
+    AccentDim = Color3.fromRGB(196, 152, 40),
+    AccentInk = Color3.fromRGB(22, 18, 10),
+    Bg = Color3.fromRGB(10, 11, 14),
+    BgPanel = Color3.fromRGB(12, 13, 16),
+    BgSidebar = Color3.fromRGB(10, 11, 14),
+    BgSection = Color3.fromRGB(12, 13, 16),
+    BgHover = Color3.fromRGB(22, 24, 30),
+    BgInput = Color3.fromRGB(16, 18, 22),
+    BgRow = Color3.fromRGB(12, 13, 16),
+    BgStatus = Color3.fromRGB(14, 15, 18),
+    BgToggleOff = Color3.fromRGB(36, 38, 46),
+    Stroke = Color3.fromRGB(32, 34, 42),
+    MenuStroke = Color3.fromRGB(40, 42, 52),
+    Divider = Color3.fromRGB(28, 30, 38),
+    Text = Color3.fromRGB(244, 244, 248),
+    TextDim = Color3.fromRGB(168, 172, 184),
+    TextMute = Color3.fromRGB(120, 124, 136),
+    LabelMute = Color3.fromRGB(120, 124, 136),
     ScrollBar = Color3.fromRGB(85, 85, 85),
     Shadow = Color3.fromRGB(0, 0, 0),
     Danger = Color3.fromRGB(255, 88, 104),
@@ -755,11 +756,10 @@ function VoidUI:CreateWindow(cfg)
 
     local function prettySectionTitle(s)
         s = tostring(s or "")
-        if s == "" or s:find("%l") then return s end
-        return (s:gsub("%S+", function(w)
-            if #w <= 3 then return w end
-            return w:sub(1, 1) .. w:sub(2):lower()
-        end))
+        if s == "" then
+            return s
+        end
+        return string.upper(s)
     end
 
     -- Section header sizing (window default → per-Section override)
@@ -808,6 +808,14 @@ function VoidUI:CreateWindow(cfg)
     })
     corner(main, cornerR)
     stroke(main, T.Stroke, 1, 0.45)
+    mk("Frame", {
+        Name = "GoldRail",
+        BackgroundColor3 = accent,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 2),
+        ZIndex = 40,
+        Parent = main,
+    })
 
     -- Sidebar
     local sidebarW = 52
@@ -957,7 +965,7 @@ function VoidUI:CreateWindow(cfg)
             Font = Fonts.Body,
             TextSize = 12,
             TextColor3 = T.Text,
-            PlaceholderText = "Search options...",
+            PlaceholderText = "Search everything...",
             PlaceholderColor3 = Color3.fromRGB(112, 117, 133),
             Text = "",
             ClearTextOnFocus = false,
@@ -1875,42 +1883,41 @@ function VoidUI:CreateWindow(cfg)
                     Parent = headRow,
                     Name = "SectionTitle",
                     Text = secTitle,
-                    TextSize = titleSize,
+                    TextSize = math.min(titleSize, 12),
                     Font = Fonts.Body,
-                    Color = T.TextDim,
+                    Color = T.TextMute,
                     Accent = accent,
-                    Bloom = bloomOn,
+                    Bloom = false,
                     Height = labelH,
                     Position = UDim2.fromOffset(titleX, math.floor((headH - labelH) / 2)),
                     Size = UDim2.new(1, -titleX, 0, labelH),
                 })
-                mk("Frame", {
-                    BackgroundColor3 = T.MenuStroke or Color3.fromRGB(50, 52, 65),
-                    BackgroundTransparency = 0.45,
-                    BorderSizePixel = 0,
-                    AnchorPoint = Vector2.new(0, 1),
-                    Position = UDim2.new(0, 0, 1, 0),
-                    Size = UDim2.new(1, 0, 0, 1),
-                    Parent = headRow,
-                })
 
                 local card = mk("Frame", {
-                    BackgroundColor3 = T.BgSection,
-                    BackgroundTransparency = math.clamp(glass * 0.15, 0, 0.1),
+                    BackgroundTransparency = 1,
                     Size = UDim2.new(1, 0, 0, 0),
                     AutomaticSize = Enum.AutomaticSize.Y,
                     Parent = wrap,
                 })
-                corner(card, rCard)
-                stroke(card, T.Stroke, 1, 0.42)
-                    pad(card, 4, 4, 4, 4)
-                    list(card, Enum.FillDirection.Vertical, 2)
+                pad(card, 0, 0, 2, 0)
+                list(card, Enum.FillDirection.Vertical, 0)
 
                 local Section = { Frame = card, Title = secTitle }
                 local rowOrder = 0
 
-                -- No hairline between rows — padding separates (Callisto/Lumen)
                 local function addDivider()
+                    if rowOrder < 1 then
+                        return
+                    end
+                    rowOrder = rowOrder + 1
+                    mk("Frame", {
+                        BackgroundColor3 = T.Divider,
+                        BackgroundTransparency = 0.25,
+                        BorderSizePixel = 0,
+                        Size = UDim2.new(1, 0, 0, 1),
+                        LayoutOrder = rowOrder,
+                        Parent = card,
+                    })
                 end
 
                 local function registerSearch(row, titleText, descText)
@@ -1940,17 +1947,15 @@ function VoidUI:CreateWindow(cfg)
                     rowOrder = rowOrder + 1
                     local hasDesc = descText and descText ~= ""
                     local row = mk("Frame", {
-                        BackgroundColor3 = T.BgRow or Color3.fromRGB(25, 26, 32),
-                        BackgroundTransparency = 0.15,
-                        Size = hasDesc and UDim2.new(1, 0, 0, 0) or UDim2.new(1, 0, 0, 36),
+                        BackgroundTransparency = 1,
+                        Size = hasDesc and UDim2.new(1, 0, 0, 0) or UDim2.new(1, 0, 0, 48),
                         AutomaticSize = hasDesc and Enum.AutomaticSize.Y or Enum.AutomaticSize.None,
                         LayoutOrder = rowOrder,
                         Active = true,
                         Parent = card,
                     })
                     row:SetAttribute("_bt", 1)
-                    corner(row, 4)
-                    pad(row, hasDesc and 8 or 0, 10, hasDesc and 8 or 0, 10)
+                    pad(row, hasDesc and 8 or 0, 0, hasDesc and 8 or 0, 0)
 
                     local hitBg = mk("Frame", {
                         BackgroundColor3 = T.BgHover,
@@ -1959,7 +1964,6 @@ function VoidUI:CreateWindow(cfg)
                         ZIndex = 0,
                         Parent = row,
                     })
-                    corner(hitBg, 4)
                     row.MouseEnter:Connect(function()
                         tween(hitBg, TI(0.1), { BackgroundTransparency = 0.88 })
                     end)
@@ -1970,7 +1974,7 @@ function VoidUI:CreateWindow(cfg)
                     local left = mk("Frame", {
                         BackgroundTransparency = 1,
                         Position = UDim2.fromOffset(0, 0),
-                        Size = hasDesc and UDim2.new(1, -112, 0, 0) or UDim2.new(1, -52, 1, 0),
+                        Size = hasDesc and UDim2.new(1, -120, 0, 0) or UDim2.new(1, -120, 1, 0),
                         AutomaticSize = hasDesc and Enum.AutomaticSize.Y or Enum.AutomaticSize.None,
                         Parent = row,
                     })
@@ -2095,15 +2099,13 @@ function VoidUI:CreateWindow(cfg)
                     addDivider()
                     rowOrder = rowOrder + 1
                     local row = mk("Frame", {
-                        BackgroundColor3 = T.BgRow or Color3.fromRGB(25, 26, 32),
-                        BackgroundTransparency = 0.15,
+                        BackgroundTransparency = 1,
                         Size = UDim2.new(1, 0, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
                         LayoutOrder = rowOrder,
                         Parent = card,
                     })
-                    corner(row, 4)
-                    pad(row, 8, 10, 8, 10)
+                    pad(row, 10, 0, 10, 0)
                     list(row, Enum.FillDirection.Vertical, 6)
                     registerSearch(row, o.Title or "Slider", o.Desc)
 
@@ -2129,7 +2131,7 @@ function VoidUI:CreateWindow(cfg)
                         return (decimals > 0 and string.format("%." .. decimals .. "f", v) or tostring(math.floor(v + 0.5)))
                     end
                     local valBox = mk("TextBox", {
-                        BackgroundColor3 = Color3.fromRGB(24, 25, 30),
+                        BackgroundColor3 = T.BgInput,
                         Font = Fonts.Title,
                         TextSize = 12,
                         TextColor3 = T.Text,
@@ -2304,16 +2306,14 @@ function VoidUI:CreateWindow(cfg)
                     rowOrder = rowOrder + 1
                     -- hitBg must NOT sit in UIListLayout + AutomaticSize (collapses / flickers)
                     local row = mk("Frame", {
-                        BackgroundColor3 = T.BgRow or Color3.fromRGB(25, 26, 32),
-                        BackgroundTransparency = 0.15,
+                        BackgroundTransparency = 1,
                         Size = UDim2.new(1, 0, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
                         LayoutOrder = rowOrder,
                         Active = true,
                         Parent = card,
                     })
-                    corner(row, 4)
-                    pad(row, 8, 10, 10, 10)
+                    pad(row, 10, 0, 10, 0)
                     registerSearch(row, o.Title, o.Desc)
 
                     local body = mk("Frame", {
@@ -2852,15 +2852,33 @@ function VoidUI:CreateWindow(cfg)
                     -- Prefer explicit Icon/Image; else chevron (not play — that made every button identical).
                     local iconName = normalizeAsset(o.Icon or o.Image) or "lucide:chevron-right"
 
-                    -- Clean row — whole row is clickable (not just the icon)
+                    -- List row + gold Redeem-style pill on the right
                     if style == "clean" or style == "row" or style == "icon" then
                         local row, _, right = makeRow(o.Title or "Button", o.Desc, o.LeadingIcon or o.LeadingImage)
-                        right.Size = UDim2.fromOffset(34, 34)
-                        local ih, img = makeIcon(right, iconName, 18, T.TextDim, 2)
-                        ih.AnchorPoint = Vector2.new(0.5, 0.5)
-                        ih.Position = UDim2.fromScale(0.5, 0.5)
+                        local cta = string.upper(tostring(o.Action or o.Cta or o.ButtonText or "GO"))
+                        local pillW = math.clamp(#cta * 8 + 28, 88, 128)
+                        right.Size = UDim2.fromOffset(pillW, 28)
+                        local ctaBtn = mk("TextButton", {
+                            BackgroundColor3 = accent,
+                            AutoButtonColor = false,
+                            Text = "",
+                            Size = UDim2.fromScale(1, 1),
+                            ZIndex = 4,
+                            Parent = right,
+                        })
+                        pill(ctaBtn)
+                        crisp(mk("TextLabel", {
+                            BackgroundTransparency = 1,
+                            Font = Fonts.Title,
+                            TextSize = 11,
+                            TextColor3 = T.AccentInk or Color3.fromRGB(22, 18, 10),
+                            Text = cta,
+                            Size = UDim2.fromScale(1, 1),
+                            ZIndex = 5,
+                            Parent = ctaBtn,
+                        }), 0.85)
 
-                        local hitBg = row:FindFirstChildWhichIsA("Frame") -- first child is hover bg from makeRow
+                        local hitBg = row:FindFirstChildWhichIsA("Frame")
                         local hit = mk("TextButton", {
                             BackgroundTransparency = 1,
                             AutoButtonColor = false,
@@ -2874,13 +2892,15 @@ function VoidUI:CreateWindow(cfg)
                             if hitBg then
                                 tween(hitBg, TI(0.1), { BackgroundTransparency = on and 0.88 or 1 })
                             end
-                            if img then setIconColor(img, on and accent or T.TextDim) end
+                            tween(ctaBtn, TI(0.12), { BackgroundColor3 = on and (T.AccentHi or accent) or accent })
                         end
                         hit.MouseEnter:Connect(function() setHover(true) end)
                         hit.MouseLeave:Connect(function() setHover(false) end)
-                        hit.MouseButton1Click:Connect(function()
+                        local function fire()
                             if o.Callback then task.spawn(o.Callback) end
-                        end)
+                        end
+                        hit.MouseButton1Click:Connect(fire)
+                        ctaBtn.MouseButton1Click:Connect(fire)
                         return hit
                     end
 
@@ -2911,8 +2931,8 @@ function VoidUI:CreateWindow(cfg)
                         strokeT = 0.45
                     else
                         bg = accent
-                        bgHover = T.AccentDim
-                        textCol = Color3.new(1, 1, 1)
+                        bgHover = T.AccentHi or accent
+                        textCol = T.AccentInk or Color3.fromRGB(22, 18, 10)
                         strokeCol = nil
                     end
 

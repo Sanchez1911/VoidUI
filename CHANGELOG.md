@@ -1,5 +1,18 @@
 # VoidUI Changelog
 
+## 1.9.7 — Codes-list gold (Redeem ref)
+
+โทนตามหน้า Codes: พื้นดำลึก · แถวลิสต์เรียบ · ปุ่มทอง
+
+- Accent ทอง `#ECC44A` · ตัวบนปุ่มสีเข้ม · เส้นทอง 2px บนหน้าต่าง
+- ตัดการ์ดซ้อนในเซคชัน — เหลือเส้นคั่นบางระหว่างแถว
+- หัวหมวดตัวเล็กสีเทาแบบ `READY FOR YOU`
+- Button แถวซ้าย + pill ทองขวา (`Action` / ค่าเริ่ม `GO`)
+- Toggle / slider / selected ใช้ทองแทนม่วง
+- Search placeholder: `Search everything...`
+
+---
+
 ## 1.9.6 — RATF Suite control polish
 
 โครงแท็บ/เลย์เอาต์เท่าเดิม — เก็บรายละเอียดให้เรียบ
