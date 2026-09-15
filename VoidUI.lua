@@ -18,7 +18,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.9.12",
+    Version = "1.9.13",
     _windows = {},
 }
 
@@ -135,8 +135,9 @@ local function crisp(lbl, amount)
     if not lbl then
         return lbl
     end
-    lbl.TextStrokeColor3 = Color3.new(0, 0, 0)
-    lbl.TextStrokeTransparency = amount or 0.68
+    -- Razor-sharp text. A stroke halo on small UI type is exactly the soft,
+    -- washed, "AI-rendered" look — kill it everywhere. Contrast comes from color.
+    lbl.TextStrokeTransparency = 1
     return lbl
 end
 
@@ -1863,8 +1864,8 @@ function VoidUI:CreateWindow(cfg)
                     Name = "SectionTitle",
                     Text = secTitle,
                     TextSize = titleSize,
-                    Font = Fonts.Body,
-                    Color = T.TextDim,
+                    Font = Fonts.Title,
+                    Color = T.TextMute,
                     Accent = accent,
                     Bloom = bloomOn,
                     Height = labelH,
@@ -1943,14 +1944,16 @@ function VoidUI:CreateWindow(cfg)
                         tween(hitBg, TI(0.1), { BackgroundTransparency = 1 })
                     end)
 
+                    -- Center the label block against the right-hand control.
                     local left = mk("Frame", {
                         BackgroundTransparency = 1,
-                        Position = UDim2.fromOffset(0, 0),
+                        AnchorPoint = Vector2.new(0, 0.5),
+                        Position = UDim2.new(0, 0, 0.5, 0),
                         Size = UDim2.new(1, -112, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
                         Parent = row,
                     })
-                    list(left, Enum.FillDirection.Vertical, 1)
+                    list(left, Enum.FillDirection.Vertical, 3)
 
                     mk("TextLabel", {
                         BackgroundTransparency = 1,
@@ -1958,8 +1961,9 @@ function VoidUI:CreateWindow(cfg)
                         TextSize = 14,
                         TextColor3 = T.Text,
                         TextXAlignment = Enum.TextXAlignment.Left,
+                        TextYAlignment = Enum.TextYAlignment.Center,
                         Text = titleText or "",
-                        Size = UDim2.new(1, 0, 0, 18),
+                        Size = UDim2.new(1, 0, 0, 17),
                         Parent = left,
                     })
 
@@ -1968,9 +1972,11 @@ function VoidUI:CreateWindow(cfg)
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
                             TextSize = 12,
-                            TextColor3 = T.TextMute,
+                            TextColor3 = Color3.fromRGB(150, 152, 162),
                             TextXAlignment = Enum.TextXAlignment.Left,
+                            TextYAlignment = Enum.TextYAlignment.Top,
                             TextWrapped = true,
+                            LineHeight = 1.06,
                             Text = descText,
                             Size = UDim2.new(1, 0, 0, 0),
                             AutomaticSize = Enum.AutomaticSize.Y,
@@ -2133,11 +2139,12 @@ function VoidUI:CreateWindow(cfg)
                         mk("TextLabel", {
                             BackgroundTransparency = 1,
                             Font = Fonts.Desc,
-                            TextSize = 13,
-                            TextColor3 = T.TextMute,
+                            TextSize = 12,
+                            TextColor3 = Color3.fromRGB(150, 152, 162),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextYAlignment = Enum.TextYAlignment.Top,
                             TextWrapped = true,
+                            LineHeight = 1.06,
                             Text = o.Desc,
                             Size = UDim2.new(1, 0, 0, 0),
                             AutomaticSize = Enum.AutomaticSize.Y,
@@ -2266,8 +2273,8 @@ function VoidUI:CreateWindow(cfg)
                     -- Menu stays wide; trigger truncates. (Stacked title+box ate a full extra line.)
                     -- makeRow: no UIListLayout on the row, so hitBg Size 1,1 is safe.
                     local row, left, right = makeRow(o.Title or "Dropdown", o.Desc, o.Icon or o.Image)
-                    left.Size = UDim2.new(1, -176, 0, 0)
-                    right.Size = UDim2.fromOffset(168, 30)
+                    left.Size = UDim2.new(1, -192, 0, 0)
+                    right.Size = UDim2.fromOffset(184, 32)
 
                     local box = mk("TextButton", {
                         BackgroundColor3 = T.BgInput,
@@ -2277,7 +2284,7 @@ function VoidUI:CreateWindow(cfg)
                         Parent = right,
                     })
                     corner(box, rCtrl)
-                    stroke(box, T.Stroke, 1, 0.28)
+                    stroke(box, T.Stroke, 1, 0.32)
 
                     local rail = mk("Frame", {
                         BackgroundTransparency = 1,
@@ -2306,10 +2313,10 @@ function VoidUI:CreateWindow(cfg)
 
                     local txt = mk("TextLabel", {
                         BackgroundTransparency = 1,
-                        Font = Fonts.Body,
+                        Font = Fonts.Title,
                         TextSize = 13,
                         TextColor3 = T.Text,
-                        TextXAlignment = Enum.TextXAlignment.Left,
+                        TextXAlignment = Enum.TextXAlignment.Right,
                         TextTruncate = Enum.TextTruncate.AtEnd,
                         Text = "",
                         Position = UDim2.fromOffset(12, 0),
@@ -2329,7 +2336,7 @@ function VoidUI:CreateWindow(cfg)
                             leftPad = 36
                         end
                         txt.Position = UDim2.fromOffset(leftPad, 0)
-                        txt.Size = UDim2.new(1, -(leftPad + 22), 1, 0)
+                        txt.Size = UDim2.new(1, -(leftPad + 28), 1, 0)
                         txt.Text = labelText()
                     end
                     refreshPreview()
