@@ -1,5 +1,14 @@
 # VoidUI Changelog
 
+## 1.9.12 — compact menu rows + stats hierarchy
+
+โครง 1.9.5 — ไม่ย่อทั้งฮับ
+
+- **Dropdown menu:** แถว 28px ไอคอน 18 — ไม่ห่อบรรทัด
+- **Stats:** Gold เป็นตัวเอก · ไม่โชว์ lucide ทุกแถว · pip สถานะ · Activity โผล่เมื่อมีของจริง
+
+---
+
 ## 1.9.11 — 1.9.5 + compact dropdown / stats craft
 
 โครง 1.9.5 เดิม — ไม่ย่อทั้งฮับ ไม่ยืดการ์ด ไม่เปลี่ยนม่วง
