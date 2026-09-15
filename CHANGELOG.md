@@ -1,6 +1,22 @@
 # VoidUI Changelog
 
-## 1.9.12 — compact menu rows + stats hierarchy
+## 1.9.15 — Anti-floating dropdown + modern STATS HUD overhaul
+
+- **Dropdown Anti-Floating:**
+  - Auto-close on scroll: Hooked `parentScroll.CanvasPosition` signal so scrolling immediately closes the menu without leaving detached popups in mid-air.
+  - Real-time `RenderStepped` anchor tracking to keep the menu locked to the trigger button during transitions.
+  - Viewport boundary clipping: Automatically closes if the trigger scrolls out of view.
+  - Clean lifecycle: Window tab changes and window minimize/hide close active dropdowns cleanly.
+  - Upgraded menu design: Sleek dark container (#141417), 8px corners, subtle border, smooth 180° rotating chevron, compact search bar (28px), and multi-select count chip with hover clear.
+
+- **STATS HUD (Section:Log) Modernization:**
+  - Dedicated obsidian card (#121216, 8px corners, dark stroke).
+  - Live status pill: Bright green badge for `IN FIGHT`, clean muted badge for `IDLE`.
+  - Prominent Gold metric card with gold coin icon, micro-label, and large crisp balance.
+  - Compact stat tiles (Rolls, Wave, Merchant, Mutation, Clone) with 18x18 icon badges and semantic state colors.
+  - Smooth in-place updates with zero layout shift.
+
+---
 
 โครง 1.9.5 — ไม่ย่อทั้งฮับ
 

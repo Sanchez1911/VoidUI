@@ -18,7 +18,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.9.14",
+    Version = "1.9.15",
     _windows = {},
 }
 
@@ -1394,6 +1394,9 @@ function VoidUI:CreateWindow(cfg)
         if not self.Visible then
             closeSearchPanel()
             if setSearchOpen then setSearchOpen(false, false) end
+            if self._activeDropdown and type(self._activeDropdown.Close) == "function" then
+                pcall(self._activeDropdown.Close)
+            end
         end
         if self._openBtn then
             self._openBtn.Visible = true
@@ -1729,6 +1732,9 @@ function VoidUI:CreateWindow(cfg)
         end)
 
         function Tab:SelectPage(page)
+            if Window._activeDropdown and type(Window._activeDropdown.Close) == "function" then
+                pcall(Window._activeDropdown.Close)
+            end
             for _, p in ipairs(self._pages) do
                 p.Frame.Visible = (p == page)
                 p._active = (p == page)
@@ -2269,9 +2275,6 @@ function VoidUI:CreateWindow(cfg)
                         if current == nil then current = values[1] end
                     end
 
-                    -- One row like Toggle — label left, value box right.
-                    -- Menu stays wide; trigger truncates. (Stacked title+box ate a full extra line.)
-                    -- makeRow: no UIListLayout on the row, so hitBg Size 1,1 is safe.
                     local row, left, right = makeRow(o.Title or "Dropdown", o.Desc, o.Icon or o.Image)
                     left.Size = UDim2.new(1, -192, 0, 0)
                     right.Size = UDim2.fromOffset(184, 32)
@@ -2284,7 +2287,7 @@ function VoidUI:CreateWindow(cfg)
                         Parent = right,
                     })
                     corner(box, rCtrl)
-                    stroke(box, T.Stroke, 1, 0.32)
+                    local boxStroke = stroke(box, T.Stroke, 1, 0.32)
 
                     local rail = mk("Frame", {
                         BackgroundTransparency = 1,
@@ -2313,14 +2316,14 @@ function VoidUI:CreateWindow(cfg)
 
                     local txt = mk("TextLabel", {
                         BackgroundTransparency = 1,
-                        Font = Fonts.Title,
-                        TextSize = 13,
+                        Font = Fonts.Body,
+                        TextSize = 12,
                         TextColor3 = T.Text,
                         TextXAlignment = Enum.TextXAlignment.Right,
                         TextTruncate = Enum.TextTruncate.AtEnd,
                         Text = "",
                         Position = UDim2.fromOffset(12, 0),
-                        Size = UDim2.new(1, -36, 1, 0),
+                        Size = UDim2.new(1, -34, 1, 0),
                         Parent = box,
                     })
 
@@ -2328,19 +2331,27 @@ function VoidUI:CreateWindow(cfg)
                     local function refreshPreview()
                         if previewIcon then previewIcon:Destroy() previewIcon = nil end
                         local asset = (not multi) and entryAsset(current) or nil
-                        local leftPad = 14
+                        local leftPad = 12
                         if asset then
-                            previewIcon = makeIcon(box, asset, 20, Color3.new(1, 1, 1), 3)
+                            previewIcon = makeIcon(box, asset, 16, Color3.new(1, 1, 1), 3)
                             previewIcon.AnchorPoint = Vector2.new(0, 0.5)
                             previewIcon.Position = UDim2.new(0, 8, 0.5, 0)
-                            leftPad = 36
+                            leftPad = 30
                         end
                         txt.Position = UDim2.fromOffset(leftPad, 0)
-                        txt.Size = UDim2.new(1, -(leftPad + 28), 1, 0)
+                        txt.Size = UDim2.new(1, -(leftPad + 26), 1, 0)
                         txt.Text = labelText()
+                        if multi and #current > 0 then
+                            txt.TextColor3 = accent
+                            txt.Font = Fonts.Title
+                        else
+                            txt.TextColor3 = T.Text
+                            txt.Font = Fonts.Body
+                        end
                     end
                     refreshPreview()
-                    local chevHolder = makeIcon(box, "lucide:chevron-down", 14, T.TextDim, 2)
+
+                    local chevHolder = makeIcon(box, "lucide:chevron-down", 13, T.TextDim, 2)
                     chevHolder.AnchorPoint = Vector2.new(1, 0.5)
                     chevHolder.Position = UDim2.new(1, -8, 0.5, 0)
 
@@ -2348,6 +2359,8 @@ function VoidUI:CreateWindow(cfg)
                     local menu
                     local menuShadow
                     local dismiss
+                    local trackConn
+                    local scrollConn
 
                     local api = {
                         Value = current,
@@ -2359,10 +2372,27 @@ function VoidUI:CreateWindow(cfg)
                     end
 
                     local function closeMenu()
+                        if not open then return end
                         open = false
+                        if Window._activeDropdown and Window._activeDropdown.Close == closeMenu then
+                            Window._activeDropdown = nil
+                        end
+                        if trackConn then
+                            pcall(function() trackConn:Disconnect() end)
+                            trackConn = nil
+                        end
+                        if scrollConn then
+                            pcall(function() scrollConn:Disconnect() end)
+                            scrollConn = nil
+                        end
                         rail.BackgroundTransparency = 0.55
-                        if chevHolder:FindFirstChildWhichIsA("ImageLabel") then
-                            tween(chevHolder:FindFirstChildWhichIsA("ImageLabel"), TI(0.15), { Rotation = 0 })
+                        tween(box, TI(0.12), { BackgroundColor3 = T.BgInput })
+                        if boxStroke then
+                            tween(boxStroke, TI(0.15), { Color = T.Stroke, Transparency = 0.32 })
+                        end
+                        local chevImg = chevHolder:FindFirstChildWhichIsA("ImageLabel")
+                        if chevImg then
+                            tween(chevImg, TI(0.15), { Rotation = 0 })
                         end
                         if menu then menu:Destroy() menu = nil end
                         if menuShadow then menuShadow:Destroy() menuShadow = nil end
@@ -2385,26 +2415,34 @@ function VoidUI:CreateWindow(cfg)
 
                     local function openMenu()
                         if open then closeMenu() return end
+                        if Window._activeDropdown and type(Window._activeDropdown.Close) == "function" then
+                            pcall(Window._activeDropdown.Close)
+                        end
                         open = true
-                        rail.BackgroundTransparency = 0.15
-                        local chevImg = chevHolder:FindFirstChildWhichIsA("ImageLabel")
-                        if chevImg then tween(chevImg, TI(0.15), { Rotation = 180 }) end
+                        Window._activeDropdown = { Close = closeMenu }
 
-                        local abs = box.AbsolutePosition
-                        local boxSz = box.AbsoluteSize
-                        -- Compact rows; icons stay readable without 44px tiles.
-                        local itemH = 30
-                        local iconSz = 18
+                        rail.BackgroundTransparency = 0.15
+                        tween(box, TI(0.12), { BackgroundColor3 = T.BgHover })
+                        if boxStroke then
+                            tween(boxStroke, TI(0.15), { Color = accent, Transparency = 0.15 })
+                        end
+                        local chevImg = chevHolder:FindFirstChildWhichIsA("ImageLabel")
+                        if chevImg then
+                            tween(chevImg, TI(0.15), { Rotation = 180 })
+                        end
+
+                        local itemH = 28
+                        local iconSz = 16
                         local gap = 2
-                        local padTop, padBot = 4, 6
+                        local padTop, padBot = 6, 6
                         local searchH = 0
                         local wantFilter = (o.Search ~= false) and (#values >= 6 or o.Search == true)
-                        if wantFilter then searchH = 28 end
-                        local countH = multi and 20 or 0
+                        if wantFilter then searchH = 34 end
+                        local countH = multi and 26 or 0
 
                         local function measureText(s, size)
                             local ok, sz = pcall(function()
-                                return TextService:GetTextSize(tostring(s or ""), size or 13, Fonts.Body, Vector2.new(2400, 40))
+                                return TextService:GetTextSize(tostring(s or ""), size or 12, Fonts.Body, Vector2.new(2400, 40))
                             end)
                             if ok and typeof(sz) == "Vector2" then
                                 return sz.X
@@ -2413,26 +2451,16 @@ function VoidUI:CreateWindow(cfg)
                         end
                         local longest = 0
                         for _, opt in ipairs(values) do
-                            longest = math.max(longest, measureText(entryLabel(opt), 13))
+                            longest = math.max(longest, measureText(entryLabel(opt), 12))
                         end
-                        local maxListH = math.floor((workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 720) * 0.42)
-                        maxListH = math.clamp(maxListH, 180, 320)
+                        local cameraY = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y) or 720
+                        local maxListH = math.clamp(math.floor(cameraY * 0.38), 160, 300)
                         local fullListH = #values * itemH + math.max(0, #values - 1) * gap
                         local listH = math.min(fullListH, maxListH)
-                        local menuW = math.clamp(math.max(boxSz.X, longest + 72), 260, 460)
+                        local boxSz = box.AbsoluteSize
+                        local menuW = math.clamp(math.max(boxSz.X, longest + 68), 240, 440)
                         local menuH = padTop + padBot + searchH + countH + listH
 
-                        -- GuiInset-safe place (same ScreenGui IgnoreGuiInset)
-                        local inset = GuiService:GetGuiInset()
-                        local posX = abs.X + (screen.IgnoreGuiInset and inset.X or 0)
-                        local posYBelow = abs.Y + boxSz.Y + 6 + (screen.IgnoreGuiInset and inset.Y or 0)
-                        local posYAbove = abs.Y - menuH - 6 + (screen.IgnoreGuiInset and inset.Y or 0)
-                        local screenH = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize.Y or 1080
-                        local openUp = (posYBelow + menuH + 12) > screenH and posYAbove > 8
-                        local posXFinal = math.clamp(posX + boxSz.X - menuW, 8, math.max(8, (workspace.CurrentCamera.ViewportSize.X or 1280) - menuW - 8))
-                        local posY = openUp and math.max(8, posYAbove) or math.max(8, posYBelow)
-
-                        -- Above Window:Popup (700+) so menus are visible inside modals
                         local z0 = 920
                         dismiss = mk("TextButton", {
                             BackgroundTransparency = 1,
@@ -2449,33 +2477,85 @@ function VoidUI:CreateWindow(cfg)
                             BackgroundTransparency = 1,
                             Image = "rbxassetid://6014261993",
                             ImageColor3 = Color3.new(0, 0, 0),
-                            ImageTransparency = 0.55,
+                            ImageTransparency = 0.5,
                             ScaleType = Enum.ScaleType.Slice,
                             SliceCenter = Rect.new(49, 49, 450, 450),
-                            Position = UDim2.fromOffset(posXFinal - 10, posY - 8),
+                            Position = UDim2.fromOffset(0, 0),
                             Size = UDim2.fromOffset(menuW + 20, menuH + 20),
                             ZIndex = z0 + 1,
                             Parent = screen,
                         })
 
                         menu = mk("Frame", {
-                            BackgroundColor3 = T.BgSection,
+                            BackgroundColor3 = Color3.fromRGB(20, 20, 23),
                             BorderSizePixel = 0,
-                            Position = UDim2.fromOffset(posXFinal, posY),
+                            Position = UDim2.fromOffset(0, 0),
                             Size = UDim2.fromOffset(menuW, menuH),
                             ZIndex = z0 + 2,
                             Parent = screen,
                         })
-                        corner(menu, rCard)
-                        stroke(menu, T.Stroke, 1, 0.4)
+                        corner(menu, 8)
+                        stroke(menu, Color3.fromRGB(56, 56, 64), 1, 0.3)
                         pad(menu, padTop, 6, padBot, 6)
+
+                        local function calcPlacement()
+                            if not box or not box:IsDescendantOf(game) then return 0, 0 end
+                            local abs = box.AbsolutePosition
+                            local bSz = box.AbsoluteSize
+                            local curH = (menu and menu.AbsoluteSize.Y > 0) and menu.AbsoluteSize.Y or menuH
+                            local inset = GuiService:GetGuiInset()
+                            local posX = abs.X + (screen.IgnoreGuiInset and inset.X or 0)
+                            local posYBelow = abs.Y + bSz.Y + 4 + (screen.IgnoreGuiInset and inset.Y or 0)
+                            local posYAbove = abs.Y - curH - 4 + (screen.IgnoreGuiInset and inset.Y or 0)
+                            local screenSz = (workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize) or Vector2.new(1280, 720)
+                            local openUp = (posYBelow + curH + 12) > screenSz.Y and posYAbove > 8
+                            local posXFinal = math.clamp(posX + bSz.X - menuW, 8, math.max(8, screenSz.X - menuW - 8))
+                            local posY = openUp and math.max(8, posYAbove) or math.max(8, posYBelow)
+                            return posXFinal, posY
+                        end
+
+                        local function updatePosition()
+                            if not open or not menu or not box or not box:IsDescendantOf(game) or not box.Visible then
+                                closeMenu()
+                                return
+                            end
+                            local parentScroll = box:FindFirstAncestorOfClass("ScrollingFrame")
+                            if parentScroll then
+                                local pTop = parentScroll.AbsolutePosition.Y
+                                local pBot = pTop + parentScroll.AbsoluteSize.Y
+                                local bPos = box.AbsolutePosition
+                                local bSz = box.AbsoluteSize
+                                if (bPos.Y + bSz.Y < pTop - 4) or (bPos.Y > pBot + 4) then
+                                    closeMenu()
+                                    return
+                                end
+                            end
+                            local px, py = calcPlacement()
+                            menu.Position = UDim2.fromOffset(px, py)
+                            if menuShadow then
+                                menuShadow.Position = UDim2.fromOffset(px - 10, py - 8)
+                            end
+                        end
+                        updatePosition()
+
+                        -- Follow window dragging / position adjustments
+                        trackConn = RunService.RenderStepped:Connect(updatePosition)
+
+                        -- Parent ScrollingFrame scroll protection:
+                        -- When the page scrolls, immediately close so dropdown NEVER floats disconnected!
+                        local parentScroll = box:FindFirstAncestorOfClass("ScrollingFrame")
+                        if parentScroll then
+                            scrollConn = parentScroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+                                closeMenu()
+                            end)
+                        end
 
                         local countLbl
                         local rebuildList
                         local function refreshCount()
                             if not countLbl then return end
                             local n = (type(current) == "table") and #current or 0
-                            countLbl.Text = n == 0 and "None selected" or (n .. " selected")
+                            countLbl.Text = n == 0 and "No selection" or (n .. " selected")
                         end
 
                         if multi then
@@ -2488,28 +2568,37 @@ function VoidUI:CreateWindow(cfg)
                             })
                             countLbl = mk("TextLabel", {
                                 BackgroundTransparency = 1,
-                                Font = Fonts.Body,
+                                Font = Fonts.Title,
                                 TextSize = 11,
-                                TextColor3 = T.TextMute,
+                                TextColor3 = T.TextDim,
                                 TextXAlignment = Enum.TextXAlignment.Left,
                                 Text = "",
-                                Size = UDim2.new(1, -48, 1, 0),
+                                Position = UDim2.fromOffset(4, 0),
+                                Size = UDim2.new(1, -54, 1, 0),
                                 ZIndex = z0 + 5,
                                 Parent = countBar,
                             })
                             local clearBtn = mk("TextButton", {
-                                BackgroundTransparency = 1,
+                                BackgroundColor3 = Color3.fromRGB(30, 30, 34),
                                 AutoButtonColor = false,
-                                Font = Fonts.Body,
-                                TextSize = 11,
+                                Font = Fonts.Title,
+                                TextSize = 10,
                                 TextColor3 = T.TextDim,
                                 Text = "Clear",
                                 AnchorPoint = Vector2.new(1, 0.5),
-                                Position = UDim2.new(1, 0, 0.5, 0),
+                                Position = UDim2.new(1, -2, 0.5, 0),
                                 Size = UDim2.fromOffset(44, 18),
                                 ZIndex = z0 + 5,
                                 Parent = countBar,
                             })
+                            corner(clearBtn, 4)
+                            stroke(clearBtn, T.Stroke, 1, 0.4)
+                            clearBtn.MouseEnter:Connect(function()
+                                tween(clearBtn, TI(0.1), { BackgroundColor3 = T.BgHover, TextColor3 = T.Text })
+                            end)
+                            clearBtn.MouseLeave:Connect(function()
+                                tween(clearBtn, TI(0.1), { BackgroundColor3 = Color3.fromRGB(30, 30, 34), TextColor3 = T.TextDim })
+                            end)
                             clearBtn.MouseButton1Click:Connect(function()
                                 current = {}
                                 api.Value = current
@@ -2544,6 +2633,7 @@ function VoidUI:CreateWindow(cfg)
                             if menuShadow then
                                 menuShadow.Size = UDim2.fromOffset(menuW + 20, newMenuH + 20)
                             end
+                            updatePosition()
 
                             scroll = mk("ScrollingFrame", {
                                 BackgroundTransparency = 1,
@@ -2552,10 +2642,12 @@ function VoidUI:CreateWindow(cfg)
                                 Size = UDim2.new(1, 0, 0, viewH),
                                 CanvasSize = UDim2.fromOffset(0, fH),
                                 ScrollingEnabled = fH > viewH,
+                                ScrollBarThickness = 3,
+                                ScrollBarImageColor3 = Color3.fromRGB(90, 90, 100),
+                                ScrollBarImageTransparency = 0.5,
                                 ZIndex = z0 + 3,
                                 Parent = menu,
                             })
-                            styleScroll(scroll)
                             local listHost = mk("Frame", {
                                 BackgroundTransparency = 1,
                                 Size = UDim2.new(1, 0, 0, fH),
@@ -2591,8 +2683,8 @@ function VoidUI:CreateWindow(cfg)
                             for _, v in ipairs(filtered) do
                                 local selected = isSelected(v)
                                 local item = mk("TextButton", {
-                                    BackgroundColor3 = T.BgHover,
-                                    BackgroundTransparency = 1,
+                                    BackgroundColor3 = selected and Color3.fromRGB(36, 26, 52) or T.BgHover,
+                                    BackgroundTransparency = selected and 0 or 1,
                                     AutoButtonColor = false,
                                     Active = true,
                                     Text = "",
@@ -2600,20 +2692,19 @@ function VoidUI:CreateWindow(cfg)
                                     ZIndex = z0 + 5,
                                     Parent = listHost,
                                 })
-                                corner(item, rCtrl)
+                                corner(item, 6)
 
-                                -- accent edge marks the current selection at a glance
                                 local selBar = mk("Frame", {
                                     BackgroundColor3 = accent,
                                     BorderSizePixel = 0,
                                     Size = UDim2.fromOffset(3, itemH - 12),
                                     AnchorPoint = Vector2.new(0, 0.5),
-                                    Position = UDim2.new(0, 3, 0.5, 0),
-                                    Visible = false,
+                                    Position = UDim2.new(0, 4, 0.5, 0),
+                                    Visible = selected,
                                     ZIndex = z0 + 6,
                                     Parent = item,
                                 })
-                                corner(selBar, 4)
+                                corner(selBar, 3)
 
                                 local textLeft = 14
                                 local asset = entryAsset(v)
@@ -2623,7 +2714,7 @@ function VoidUI:CreateWindow(cfg)
                                         BackgroundTransparency = 0.2,
                                         Size = UDim2.fromOffset(iconSz, iconSz),
                                         AnchorPoint = Vector2.new(0, 0.5),
-                                        Position = UDim2.new(0, 8, 0.5, 0),
+                                        Position = UDim2.new(0, 10, 0.5, 0),
                                         ClipsDescendants = true,
                                         ZIndex = z0 + 6,
                                         Parent = item,
@@ -2633,19 +2724,17 @@ function VoidUI:CreateWindow(cfg)
                                     ic.AnchorPoint = Vector2.new(0.5, 0.5)
                                     ic.Position = UDim2.fromScale(0.5, 0.5)
                                     ic.Size = UDim2.fromOffset(iconSz, iconSz)
-                                    textLeft = 8 + iconSz + 8
+                                    textLeft = 10 + iconSz + 8
                                 end
 
                                 local name = entryLabel(v)
                                 local nameLbl = mk("TextLabel", {
                                     BackgroundTransparency = 1,
-                                    Font = Fonts.Body,
+                                    Font = selected and Fonts.Title or Fonts.Body,
                                     TextSize = 12,
-                                    TextScaled = false,
-                                    TextColor3 = T.TextDim,
+                                    TextColor3 = selected and Color3.fromRGB(255, 255, 255) or T.TextDim,
                                     TextXAlignment = Enum.TextXAlignment.Left,
                                     TextYAlignment = Enum.TextYAlignment.Center,
-                                    TextWrapped = false,
                                     TextTruncate = Enum.TextTruncate.AtEnd,
                                     Text = name,
                                     Size = UDim2.new(1, -(textLeft + 28), 1, 0),
@@ -2656,12 +2745,17 @@ function VoidUI:CreateWindow(cfg)
                                 })
 
                                 local chkHold
+                                if selected then
+                                    chkHold = makeIcon(item, "lucide:check", 13, accent, z0 + 7)
+                                    chkHold.AnchorPoint = Vector2.new(1, 0.5)
+                                    chkHold.Position = UDim2.new(1, -8, 0.5, 0)
+                                end
+
                                 local function setRowSelected(on)
                                     selBar.Visible = on
                                     if on then
-                                        -- accent-tinted fill = clearly "picked", not just a faint grey
-                                        item.BackgroundColor3 = accent
-                                        item.BackgroundTransparency = 0.85
+                                        item.BackgroundColor3 = Color3.fromRGB(36, 26, 52)
+                                        item.BackgroundTransparency = 0
                                         nameLbl.Font = Fonts.Title
                                         nameLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
                                         if not chkHold then
@@ -2680,12 +2774,11 @@ function VoidUI:CreateWindow(cfg)
                                         end
                                     end
                                 end
-                                setRowSelected(selected)
 
                                 item.MouseEnter:Connect(function()
                                     if not isSelected(v) then
                                         nameLbl.TextColor3 = T.Text
-                                        tween(item, TI(0.1), { BackgroundTransparency = 0.4, BackgroundColor3 = T.BgHover })
+                                        tween(item, TI(0.1), { BackgroundTransparency = 0.5, BackgroundColor3 = T.BgHover })
                                     end
                                 end)
                                 item.MouseLeave:Connect(function()
@@ -2724,32 +2817,30 @@ function VoidUI:CreateWindow(cfg)
 
                         if wantFilter then
                             local searchBar = mk("Frame", {
-                                BackgroundColor3 = T.BgInput,
+                                BackgroundColor3 = Color3.fromRGB(15, 15, 18),
                                 Size = UDim2.new(1, 0, 0, 28),
-                                ZIndex = 502,
+                                ZIndex = z0 + 4,
                                 Parent = menu,
                             })
-                            corner(searchBar, 8)
-                            stroke(searchBar, T.Stroke, 1, 0.4)
-                            local sIcon = makeIcon(searchBar, "lucide:search", 13, T.TextMute, 503)
+                            corner(searchBar, 6)
+                            stroke(searchBar, Color3.fromRGB(44, 44, 52), 1, 0.4)
+                            local sIcon = makeIcon(searchBar, "lucide:search", 13, T.TextMute, z0 + 5)
                             sIcon.Position = UDim2.fromOffset(8, 7)
                             local sBox = mk("TextBox", {
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Body,
                                 TextSize = 12,
                                 TextColor3 = T.Text,
-                                PlaceholderText = "Search…",
+                                PlaceholderText = "Search...",
                                 PlaceholderColor3 = T.TextMute,
                                 Text = "",
                                 ClearTextOnFocus = false,
                                 Position = UDim2.fromOffset(28, 0),
                                 Size = UDim2.new(1, -34, 1, 0),
                                 TextXAlignment = Enum.TextXAlignment.Left,
-                                ZIndex = 503,
+                                ZIndex = z0 + 5,
                                 Parent = searchBar,
                             })
-                            -- don't dismiss when clicking search
-                            sBox.Focused:Connect(function() end)
                             sBox:GetPropertyChangedSignal("Text"):Connect(function()
                                 filterQ = sBox.Text
                                 rebuildList()
@@ -2784,6 +2875,7 @@ function VoidUI:CreateWindow(cfg)
                     function api:Refresh(newValues)
                         values = newValues or values
                         self.Values = values
+                        refreshPreview()
                     end
 
                     if o.Flag then Window._flags[o.Flag] = api end
@@ -3195,13 +3287,18 @@ function VoidUI:CreateWindow(cfg)
                     end
 
                     local board = mk("Frame", {
-                        BackgroundTransparency = 1,
+                        BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+                        BackgroundTransparency = 0.35,
+                        BorderSizePixel = 0,
                         Size = UDim2.new(1, 0, 0, 0),
                         AutomaticSize = Enum.AutomaticSize.Y,
                         LayoutOrder = 2,
                         Parent = wrap,
                     })
-                    list(board, Enum.FillDirection.Vertical, 1)
+                    corner(board, 8)
+                    stroke(board, Color3.fromRGB(44, 44, 52), 1, 0.45)
+                    pad(board, 8, 10, 8, 10)
+                    list(board, Enum.FillDirection.Vertical, 3)
 
                     local feedHead
                     local feedDivider
@@ -3432,97 +3529,127 @@ function VoidUI:CreateWindow(cfg)
                     local function makeHeadRow(data, order)
                         local row = mk("Frame", {
                             BackgroundTransparency = 1,
-                            Size = UDim2.new(1, 0, 0, 34),
+                            Size = UDim2.new(1, 0, 0, 28),
                             LayoutOrder = order,
                             Parent = board,
                         })
-                        local sub = data.Value or data.Sub
-                        local pipCol = statusSubColor(sub)
-                        local pip = mk("Frame", {
-                            Name = "Pip",
-                            BackgroundColor3 = pipCol,
-                            Size = UDim2.fromOffset(7, 7),
-                            Position = UDim2.fromOffset(1, 6),
+                        local sub = data.Value or data.Sub or ""
+                        local isLive = statusSubColor(sub) == T.Success
+                        local pipCol = isLive and T.Success or T.TextMute
+
+                        local leftBox = mk("Frame", {
+                            BackgroundTransparency = 1,
+                            Size = UDim2.new(1, -95, 1, 0),
                             Parent = row,
                         })
-                        corner(pip, 8)
-                        stroke(pip, pipCol, 3, 0.78)
+                        list(leftBox, Enum.FillDirection.Horizontal, 6, Enum.VerticalAlignment.Center)
+
+                        local iconHolder = makeIcon(leftBox, data.Icon or "lucide:activity", 15, accent, 2)
+                        iconHolder.AnchorPoint = Vector2.new(0, 0.5)
+
                         mk("TextLabel", {
                             Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
-                            TextSize = 15,
+                            TextSize = 13,
                             TextColor3 = T.Text,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextTruncate = Enum.TextTruncate.AtEnd,
-                            Text = tostring(data.Label or data.Text or "Live"),
-                            Position = UDim2.fromOffset(16, 0),
-                            Size = UDim2.new(1, -16, 0, 18),
+                            Text = tostring(data.Label or data.Text or "Status"),
+                            Size = UDim2.new(1, -22, 1, 0),
+                            Parent = leftBox,
+                        })
+
+                        local pill = mk("Frame", {
+                            Name = "Pill",
+                            BackgroundColor3 = isLive and Color3.fromRGB(22, 54, 34) or Color3.fromRGB(28, 28, 32),
+                            AnchorPoint = Vector2.new(1, 0.5),
+                            Position = UDim2.new(1, 0, 0.5, 0),
+                            Size = UDim2.fromOffset(84, 20),
                             Parent = row,
                         })
+                        corner(pill, 10)
+                        stroke(pill, isLive and Color3.fromRGB(60, 190, 110) or Color3.fromRGB(50, 50, 56), 1, isLive and 0.45 or 0.25)
+
+                        local dot = mk("Frame", {
+                            Name = "Pip",
+                            BackgroundColor3 = pipCol,
+                            Size = UDim2.fromOffset(6, 6),
+                            AnchorPoint = Vector2.new(0, 0.5),
+                            Position = UDim2.new(0, 8, 0.5, 0),
+                            Parent = pill,
+                        })
+                        corner(dot, 3)
+
+                        local valText = string.upper(tostring(sub ~= "" and sub or (isLive and "IN FIGHT" or "IDLE")))
                         mk("TextLabel", {
                             Name = "Value",
                             BackgroundTransparency = 1,
-                            Font = Fonts.Body,
-                            TextSize = 11,
-                            TextColor3 = pipCol,
-                            TextXAlignment = Enum.TextXAlignment.Left,
+                            Font = Fonts.Title,
+                            TextSize = 9,
+                            TextColor3 = isLive and T.Success or T.TextDim,
+                            TextXAlignment = Enum.TextXAlignment.Center,
                             TextTruncate = Enum.TextTruncate.AtEnd,
-                            Text = tostring(sub or ""),
-                            Position = UDim2.fromOffset(16, 18),
-                            Size = UDim2.new(1, -16, 0, 13),
-                            Parent = row,
+                            Text = valText,
+                            Position = UDim2.fromOffset(14, 0),
+                            Size = UDim2.new(1, -16, 1, 0),
+                            Parent = pill,
                         })
+
                         return row
                     end
 
                     local function makeStatRow(data, order)
                         local hero = isHeroStat(data)
                         if hero then
-                            -- Hero stat = the centerpiece (Gold). Subtle accent-washed card,
-                            -- micro caps label, oversized value. Reads as a real HUD banner.
                             local row = mk("Frame", {
-                                BackgroundColor3 = accent,
-                                BackgroundTransparency = 0.9,
-                                Size = UDim2.new(1, 0, 0, 50),
+                                BackgroundColor3 = Color3.fromRGB(25, 23, 33),
+                                BorderSizePixel = 0,
+                                Size = UDim2.new(1, 0, 0, 42),
                                 LayoutOrder = order,
                                 Parent = board,
                             })
-                            corner(row, 8)
-                            stroke(row, accent, 1, 0.55)
-                            local bar = mk("Frame", {
-                                BackgroundColor3 = accent,
-                                BorderSizePixel = 0,
-                                Size = UDim2.fromOffset(3, 30),
+                            corner(row, 6)
+                            stroke(row, Color3.fromRGB(72, 60, 94), 1, 0.4)
+
+                            local iconTile = mk("Frame", {
+                                BackgroundColor3 = Color3.fromRGB(34, 30, 46),
+                                Size = UDim2.fromOffset(26, 26),
                                 AnchorPoint = Vector2.new(0, 0.5),
-                                Position = UDim2.new(0, 0, 0.5, 0),
+                                Position = UDim2.new(0, 8, 0.5, 0),
                                 Parent = row,
                             })
-                            corner(bar, 4)
+                            corner(iconTile, 5)
+                            local ih = makeIcon(iconTile, data.Icon or "lucide:coins", 15, Color3.fromRGB(250, 204, 21), 2)
+                            ih.AnchorPoint = Vector2.new(0.5, 0.5)
+                            ih.Position = UDim2.fromScale(0.5, 0.5)
+
                             mk("TextLabel", {
-                                Name = "Head",
+                                Name = "Label",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Title,
                                 TextSize = 10,
-                                TextColor3 = T.TextDim,
+                                TextColor3 = Color3.fromRGB(160, 160, 175),
                                 TextXAlignment = Enum.TextXAlignment.Left,
-                                Text = string.upper(tostring(data.Label or "")),
-                                Position = UDim2.fromOffset(14, 8),
-                                Size = UDim2.new(1, -24, 0, 12),
+                                Text = string.upper(tostring(data.Label or "GOLD")),
+                                Position = UDim2.fromOffset(42, 6),
+                                Size = UDim2.new(0, 100, 0, 14),
                                 Parent = row,
                             })
+
                             local valueLbl = mk("TextLabel", {
                                 Name = "Value",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Title,
-                                TextSize = 23,
-                                TextColor3 = pickStatValueColor(data.Value, data.Tone),
-                                TextXAlignment = Enum.TextXAlignment.Left,
+                                TextSize = 16,
+                                TextColor3 = Color3.fromRGB(255, 255, 255),
+                                TextXAlignment = Enum.TextXAlignment.Right,
                                 TextYAlignment = Enum.TextYAlignment.Center,
                                 TextTruncate = Enum.TextTruncate.AtEnd,
-                                Text = tostring(data.Value or ""),
-                                Position = UDim2.fromOffset(14, 21),
-                                Size = UDim2.new(1, -24, 0, 24),
+                                Text = tostring(data.Value or "$0"),
+                                AnchorPoint = Vector2.new(1, 0.5),
+                                Position = UDim2.new(1, -10, 0.5, 0),
+                                Size = UDim2.new(1, -150, 1, 0),
                                 Parent = row,
                             })
                             local key = string.lower(tostring(data.Label or data.Id or ""))
@@ -3533,49 +3660,73 @@ function VoidUI:CreateWindow(cfg)
                         end
 
                         local row = mk("Frame", {
+                            BackgroundColor3 = T.BgHover,
                             BackgroundTransparency = 1,
                             Size = UDim2.new(1, 0, 0, 24),
                             LayoutOrder = order,
                             Parent = board,
                         })
+                        corner(row, 4)
+
                         local x = 0
                         local iconImg
                         if data.Icon then
-                            local ih, img = makeIcon(row, data.Icon, 15, T.TextMute, 2)
-                            ih.AnchorPoint = Vector2.new(0, 0.5)
-                            ih.Position = UDim2.new(0, 0, 0.5, 0)
+                            local slot = mk("Frame", {
+                                BackgroundColor3 = Color3.fromRGB(24, 24, 28),
+                                BackgroundTransparency = 0.4,
+                                Size = UDim2.fromOffset(18, 18),
+                                AnchorPoint = Vector2.new(0, 0.5),
+                                Position = UDim2.new(0, 4, 0.5, 0),
+                                Parent = row,
+                            })
+                            corner(slot, 4)
+                            local ih, img = makeIcon(slot, data.Icon, 12, T.TextMute, 2)
+                            ih.AnchorPoint = Vector2.new(0.5, 0.5)
+                            ih.Position = UDim2.fromScale(0.5, 0.5)
                             iconImg = img
-                            x = 22
+                            x = 28
+                        else
+                            x = 6
                         end
+
                         mk("TextLabel", {
                             Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
                             TextSize = 12,
-                            TextColor3 = T.TextDim,
+                            TextColor3 = Color3.fromRGB(165, 165, 175),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextYAlignment = Enum.TextYAlignment.Center,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             Text = tostring(data.Label or ""),
                             Position = UDim2.fromOffset(x, 0),
-                            Size = UDim2.new(1, -(x + 100), 1, 0),
+                            Size = UDim2.new(1, -(x + 110), 1, 0),
                             Parent = row,
                         })
+
                         local valueLbl = mk("TextLabel", {
                             Name = "Value",
                             BackgroundTransparency = 1,
-                            Font = Fonts.Title,
-                            TextSize = 13,
+                            Font = isIdleValue(data.Value) and Fonts.Body or Fonts.Title,
+                            TextSize = 12,
                             TextColor3 = pickStatValueColor(data.Value, data.Tone),
                             TextXAlignment = Enum.TextXAlignment.Right,
                             TextYAlignment = Enum.TextYAlignment.Center,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             Text = tostring(data.Value or ""),
                             AnchorPoint = Vector2.new(1, 0.5),
-                            Position = UDim2.new(1, 0, 0.5, 0),
-                            Size = UDim2.new(0, 132, 1, 0),
+                            Position = UDim2.new(1, -6, 0.5, 0),
+                            Size = UDim2.new(0, 110, 1, 0),
                             Parent = row,
                         })
+
+                        row.MouseEnter:Connect(function()
+                            tween(row, TI(0.1), { BackgroundTransparency = 0.7 })
+                        end)
+                        row.MouseLeave:Connect(function()
+                            tween(row, TI(0.1), { BackgroundTransparency = 1 })
+                        end)
+
                         local key = string.lower(tostring(data.Label or data.Id or ""))
                         if key ~= "" then
                             statIndex[key] = { Value = valueLbl, Icon = iconImg, Data = data }
@@ -3591,7 +3742,7 @@ function VoidUI:CreateWindow(cfg)
                             Parent = board,
                         })
                         mk("Frame", {
-                            BackgroundColor3 = T.Divider,
+                            BackgroundColor3 = Color3.fromRGB(36, 36, 42),
                             BorderSizePixel = 0,
                             Size = UDim2.new(1, 0, 0, 1),
                             Position = UDim2.fromOffset(0, 2),
@@ -3601,7 +3752,7 @@ function VoidUI:CreateWindow(cfg)
                             Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
-                            TextSize = 11,
+                            TextSize = 10,
                             TextColor3 = T.TextMute,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             Text = string.upper(tostring(data.Text or data.Label or data.Title or "")),
@@ -3614,17 +3765,18 @@ function VoidUI:CreateWindow(cfg)
 
                     local function makeLineRow(data, order)
                         local row = mk("Frame", {
-                            BackgroundTransparency = 1,
-                            Size = UDim2.new(1, 0, 0, 18),
+                            BackgroundColor3 = Color3.fromRGB(14, 14, 17),
+                            BorderSizePixel = 0,
+                            Size = UDim2.new(1, 0, 0, 22),
                             LayoutOrder = order,
                             Parent = board,
                         })
-                        local x = 0
-                        if data.Icon and not isLucideIcon(data.Icon) then
-                            local ih = makeIcon(row, data.Icon, 12, T.TextMute, 2)
-                            ih.Position = UDim2.fromOffset(0, 3)
-                            x = 16
-                        end
+                        corner(row, 4)
+
+                        local ih = makeIcon(row, data.Icon or "lucide:activity", 11, T.TextMute, 2)
+                        ih.AnchorPoint = Vector2.new(0, 0.5)
+                        ih.Position = UDim2.new(0, 6, 0.5, 0)
+
                         mk("TextLabel", {
                             Name = "Label",
                             BackgroundTransparency = 1,
@@ -3634,8 +3786,8 @@ function VoidUI:CreateWindow(cfg)
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             Text = tostring(data.Text or data.Label or ""),
-                            Position = UDim2.fromOffset(x, 0),
-                            Size = UDim2.new(1, -x, 1, 0),
+                            Position = UDim2.fromOffset(24, 0),
+                            Size = UDim2.new(1, -28, 1, 0),
                             Parent = row,
                         })
                         return row
@@ -3643,88 +3795,130 @@ function VoidUI:CreateWindow(cfg)
 
                     local function stateSpec(state)
                         local s = string.lower(tostring(state or "go"))
-                        if s == "done" or s == "ok" then
-                            return "DONE", T.Success, "lucide:check"
-                        elseif s == "skip" or s == "warn" then
-                            return "SKIP", T.Warn, "lucide:minus"
+                        if s == "done" or s == "ok" or s == "go" then
+                            return "ACTIVE", T.Success, "lucide:check"
+                        elseif s == "skip" or s == "warn" or s == "off" or s == "idle" then
+                            return "OFF", T.TextMute, "lucide:minus"
                         elseif s == "limit" or s == "err" or s == "fail" then
                             return "LIMIT", T.Danger, "lucide:ban"
                         elseif s == "wait" then
                             return "WAIT", T.TextMute, "lucide:clock"
                         end
-                        return "GO", T.Success, "lucide:circle"
+                        return "OFF", T.TextMute, "lucide:circle"
                     end
 
                     local function makeStateRow(data, order)
                         local pillText, col = stateSpec(data.State)
-                        local filled = pillText ~= "GO" and pillText ~= "WAIT"
+                        local isLive = (pillText == "ACTIVE")
                         local row = mk("Frame", {
+                            BackgroundColor3 = T.BgHover,
                             BackgroundTransparency = 1,
-                            Size = UDim2.new(1, 0, 0, 22),
+                            Size = UDim2.new(1, 0, 0, 24),
                             LayoutOrder = order,
                             Parent = board,
                         })
+                        corner(row, 4)
+
+                        local slot = mk("Frame", {
+                            BackgroundColor3 = Color3.fromRGB(24, 24, 28),
+                            BackgroundTransparency = 0.4,
+                            Size = UDim2.fromOffset(18, 18),
+                            AnchorPoint = Vector2.new(0, 0.5),
+                            Position = UDim2.new(0, 4, 0.5, 0),
+                            Parent = row,
+                        })
+                        corner(slot, 4)
+                        local ih = makeIcon(slot, data.Icon or "lucide:shield", 12, T.TextMute, 2)
+                        ih.AnchorPoint = Vector2.new(0.5, 0.5)
+                        ih.Position = UDim2.fromScale(0.5, 0.5)
+
                         mk("TextLabel", {
                             Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
                             TextSize = 12,
-                            TextColor3 = T.TextDim,
+                            TextColor3 = Color3.fromRGB(165, 165, 175),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             Text = tostring(data.Label or data.Text or ""),
-                            Size = UDim2.new(1, -58, 1, 0),
+                            Position = UDim2.fromOffset(28, 0),
+                            Size = UDim2.new(1, -95, 1, 0),
                             Parent = row,
                         })
+
                         local chip = mk("Frame", {
                             Name = "Pill",
-                            BackgroundColor3 = col,
-                            BackgroundTransparency = filled and 0 or 1,
+                            BackgroundColor3 = isLive and Color3.fromRGB(22, 54, 34) or Color3.fromRGB(28, 28, 32),
                             AnchorPoint = Vector2.new(1, 0.5),
-                            Position = UDim2.new(1, 0, 0.5, 0),
-                            Size = UDim2.fromOffset(50, 16),
+                            Position = UDim2.new(1, -6, 0.5, 0),
+                            Size = UDim2.fromOffset(56, 18),
                             Parent = row,
                         })
                         corner(chip, 4)
-                        stroke(chip, col, 1, filled and 1 or 0.15)
+                        stroke(chip, isLive and Color3.fromRGB(60, 190, 110) or Color3.fromRGB(48, 48, 54), 1, isLive and 0.45 or 0.3)
+
                         mk("TextLabel", {
                             Name = "Text",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
-                            TextSize = 9,
-                            TextColor3 = filled and Color3.fromRGB(10, 12, 14) or col,
-                            Text = pillText,
+                            TextSize = 10,
+                            TextColor3 = isLive and T.Success or T.TextMute,
+                            Text = isLive and "ACTIVE" or "OFF",
                             Size = UDim2.fromScale(1, 1),
                             Parent = chip,
                         })
+
+                        row.MouseEnter:Connect(function()
+                            tween(row, TI(0.1), { BackgroundTransparency = 0.7 })
+                        end)
+                        row.MouseLeave:Connect(function()
+                            tween(row, TI(0.1), { BackgroundTransparency = 1 })
+                        end)
+
                         return row
                     end
 
                     local function makeItemRow(data, order)
                         local hasSub = data.Sub and tostring(data.Sub) ~= ""
                         local row = mk("Frame", {
+                            BackgroundColor3 = T.BgHover,
                             BackgroundTransparency = 1,
-                            Size = UDim2.new(1, 0, 0, hasSub and 34 or 24),
+                            Size = UDim2.new(1, 0, 0, hasSub and 32 or 24),
                             LayoutOrder = order,
                             Parent = board,
                         })
+                        corner(row, 4)
+
                         local x = 0
-                        if data.Icon and not isLucideIcon(data.Icon) then
-                            local ih = makeIcon(row, data.Icon, 14, T.TextDim, 2)
-                            ih.Position = UDim2.fromOffset(0, hasSub and 8 or 3)
-                            x = 20
+                        if data.Icon then
+                            local slot = mk("Frame", {
+                                BackgroundColor3 = Color3.fromRGB(24, 24, 28),
+                                BackgroundTransparency = 0.4,
+                                Size = UDim2.fromOffset(18, 18),
+                                AnchorPoint = Vector2.new(0, 0.5),
+                                Position = UDim2.new(0, 4, 0.5, 0),
+                                Parent = row,
+                            })
+                            corner(slot, 4)
+                            local ih = makeIcon(slot, data.Icon, 12, T.TextMute, 2)
+                            ih.AnchorPoint = Vector2.new(0.5, 0.5)
+                            ih.Position = UDim2.fromScale(0.5, 0.5)
+                            x = 28
+                        else
+                            x = 6
                         end
+
                         mk("TextLabel", {
                             Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
-                            TextSize = 13,
-                            TextColor3 = T.Text,
+                            TextSize = 12,
+                            TextColor3 = Color3.fromRGB(165, 165, 175),
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             Text = tostring(data.Label or data.Name or ""),
-                            Position = UDim2.fromOffset(x, hasSub and 1 or 0),
-                            Size = UDim2.new(1, -(x + 64), 0, 16),
+                            Position = UDim2.fromOffset(x, hasSub and 2 or 0),
+                            Size = UDim2.new(1, -(x + 80), hasSub and 0 or 1, hasSub and 14 or 0),
                             Parent = row,
                         })
                         if hasSub then
@@ -3732,32 +3926,41 @@ function VoidUI:CreateWindow(cfg)
                                 Name = "Sub",
                                 BackgroundTransparency = 1,
                                 Font = Fonts.Desc,
-                                TextSize = 11,
+                                TextSize = 10,
                                 TextColor3 = T.TextMute,
                                 TextXAlignment = Enum.TextXAlignment.Left,
                                 TextTruncate = Enum.TextTruncate.AtEnd,
                                 Text = tostring(data.Sub),
-                                Position = UDim2.fromOffset(x, 17),
-                                Size = UDim2.new(1, -(x + 8), 0, 14),
+                                Position = UDim2.fromOffset(x, 16),
+                                Size = UDim2.new(1, -(x + 80), 0, 12),
                                 Parent = row,
                             })
                         end
                         if data.Value ~= nil and tostring(data.Value) ~= "" then
-                            crisp(mk("TextLabel", {
+                            local val = tostring(data.Value)
+                            local isClaim = string.lower(val) == "claim"
+                            local valLbl = mk("TextLabel", {
                                 Name = "Value",
                                 BackgroundTransparency = 1,
-                                Font = Fonts.Title,
-                                TextSize = 13,
-                                TextColor3 = valueColor(data.Tone),
+                                Font = isClaim and Fonts.Title or Fonts.Body,
+                                TextSize = 12,
+                                TextColor3 = isClaim and T.Success or pickStatValueColor(val, data.Tone),
                                 TextXAlignment = Enum.TextXAlignment.Right,
                                 TextTruncate = Enum.TextTruncate.AtEnd,
-                                Text = tostring(data.Value),
-                                AnchorPoint = Vector2.new(1, 0),
-                                Position = UDim2.new(1, 0, 0, 0),
-                                Size = UDim2.new(0, 72, 0, 16),
+                                Text = val,
+                                AnchorPoint = Vector2.new(1, 0.5),
+                                Position = UDim2.new(1, -6, 0.5, 0),
+                                Size = UDim2.new(0, 100, 1, 0),
                                 Parent = row,
-                            }), 0.7)
+                            })
                         end
+
+                        row.MouseEnter:Connect(function()
+                            tween(row, TI(0.1), { BackgroundTransparency = 0.7 })
+                        end)
+                        row.MouseLeave:Connect(function()
+                            tween(row, TI(0.1), { BackgroundTransparency = 1 })
+                        end)
                         return row
                     end
 
@@ -3833,17 +4036,29 @@ function VoidUI:CreateWindow(cfg)
                             return
                         end
                         if kind == "head" or kind == "live" then
-                            local sub = data.Value or data.Sub
-                            local col = statusSubColor(sub)
+                            local sub = data.Value or data.Sub or ""
+                            local isLive = statusSubColor(sub) == T.Success
+                            local pipCol = isLive and T.Success or T.TextMute
                             setNamed(frame, "Label", data.Label or data.Text)
-                            setNamed(frame, "Value", sub, col)
-                            local pip = frame:FindFirstChild("Pip")
-                            if pip and pip:IsA("GuiObject") then
-                                pip.BackgroundColor3 = col
+                            local pill = frame:FindFirstChild("Pill")
+                            if pill then
+                                pill.BackgroundColor3 = isLive and Color3.fromRGB(22, 54, 34) or Color3.fromRGB(28, 28, 32)
+                                local st = pill:FindFirstChildOfClass("UIStroke")
+                                if st then
+                                    st.Color = isLive and Color3.fromRGB(60, 190, 110) or Color3.fromRGB(50, 50, 56)
+                                    st.Transparency = isLive and 0.45 or 0.25
+                                end
+                                local pip = pill:FindFirstChild("Pip")
+                                if pip then pip.BackgroundColor3 = pipCol end
+                                local val = pill:FindFirstChild("Value")
+                                if val and val:IsA("TextLabel") then
+                                    val.Text = string.upper(tostring(sub ~= "" and sub or (isLive and "IN FIGHT" or "IDLE")))
+                                    val.TextColor3 = isLive and T.Success or T.TextDim
+                                end
                             end
                         elseif kind == "stat" or kind == "kv" then
-                            setNamed(frame, "Label", data.Label)
-                            setNamed(frame, "Value", data.Value, pickStatValueColor(data.Value, data.Tone))
+                            setNamed(frame, "Label", isHeroStat(data) and string.upper(tostring(data.Label or "GOLD")) or data.Label)
+                            setNamed(frame, "Value", data.Value, isHeroStat(data) and Color3.fromRGB(255, 255, 255) or pickStatValueColor(data.Value, data.Tone))
                             local key = string.lower(tostring(data.Label or data.Id or ""))
                             if key ~= "" and statIndex[key] then
                                 statIndex[key].Data = data
@@ -3853,27 +4068,28 @@ function VoidUI:CreateWindow(cfg)
                         elseif kind == "state" then
                             setNamed(frame, "Label", data.Label or data.Text)
                             local pillText, col = stateSpec(data.State)
-                            local filled = pillText ~= "GO" and pillText ~= "WAIT"
+                            local isLive = (pillText == "ACTIVE")
                             local pill = frame:FindFirstChild("Pill")
                             if pill then
-                                pill.BackgroundColor3 = col
-                                pill.BackgroundTransparency = filled and 0 or 1
+                                pill.BackgroundColor3 = isLive and Color3.fromRGB(22, 54, 34) or Color3.fromRGB(28, 28, 32)
                                 local st = pill:FindFirstChildOfClass("UIStroke")
                                 if st then
-                                    st.Color = col
-                                    st.Transparency = filled and 1 or 0.15
+                                    st.Color = isLive and Color3.fromRGB(60, 190, 110) or Color3.fromRGB(48, 48, 54)
+                                    st.Transparency = isLive and 0.45 or 0.3
                                 end
                                 local t = pill:FindFirstChild("Text")
                                 if t and t:IsA("TextLabel") then
-                                    t.Text = pillText
-                                    t.TextColor3 = filled and Color3.fromRGB(10, 12, 14) or col
+                                    t.Text = isLive and "ACTIVE" or "OFF"
+                                    t.TextColor3 = isLive and T.Success or T.TextMute
                                 end
                             end
                         elseif kind == "item" then
                             setNamed(frame, "Label", data.Label or data.Name)
                             setNamed(frame, "Sub", data.Sub)
                             if data.Value ~= nil then
-                                setNamed(frame, "Value", data.Value, valueColor(data.Tone))
+                                local val = tostring(data.Value)
+                                local isClaim = string.lower(val) == "claim"
+                                setNamed(frame, "Value", val, isClaim and T.Success or pickStatValueColor(val, data.Tone))
                             end
                         elseif kind == "event" or kind == "log" then
                             setNamed(frame, "Label", data.Text or data.Label)
