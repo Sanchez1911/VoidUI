@@ -18,7 +18,7 @@
 ]]
 
 local VoidUI = {
-    Version = "1.9.5",
+    Version = "1.9.11",
     _windows = {},
 }
 
@@ -2262,60 +2262,19 @@ function VoidUI:CreateWindow(cfg)
                         if current == nil then current = values[1] end
                     end
 
-                    addDivider()
-                    rowOrder = rowOrder + 1
-                    -- hitBg must NOT sit in UIListLayout + AutomaticSize (collapses / flickers)
-                    local row = mk("Frame", {
-                        BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 0, 0),
-                        AutomaticSize = Enum.AutomaticSize.Y,
-                        LayoutOrder = rowOrder,
-                        Active = true,
-                        Parent = card,
-                    })
-                    pad(row, 8, 10, 10, 10)
-                    registerSearch(row, o.Title, o.Desc)
-
-                    local body = mk("Frame", {
-                        BackgroundTransparency = 1,
-                        Size = UDim2.new(1, 0, 0, 0),
-                        AutomaticSize = Enum.AutomaticSize.Y,
-                        ZIndex = 1,
-                        Parent = row,
-                    })
-                    list(body, Enum.FillDirection.Vertical, 6)
-
-                    crisp(mk("TextLabel", {
-                        BackgroundTransparency = 1,
-                        Font = Fonts.Title,
-                        TextSize = 14,
-                        TextColor3 = T.Text,
-                        TextXAlignment = Enum.TextXAlignment.Left,
-                        Text = o.Title or "Dropdown",
-                        Size = UDim2.new(1, 0, 0, 18),
-                        Parent = body,
-                    }), 0.72)
-                    if not compactOn and o.Desc and o.Desc ~= "" then
-                        mk("TextLabel", {
-                            BackgroundTransparency = 1,
-                            Font = Fonts.Desc,
-                            TextSize = 12,
-                            TextColor3 = T.TextDim,
-                            TextXAlignment = Enum.TextXAlignment.Left,
-                            TextWrapped = true,
-                            Text = o.Desc,
-                            Size = UDim2.new(1, 0, 0, 0),
-                            AutomaticSize = Enum.AutomaticSize.Y,
-                            Parent = body,
-                        })
-                    end
+                    -- One row like Toggle — label left, value box right.
+                    -- Menu stays wide; trigger truncates. (Stacked title+box ate a full extra line.)
+                    -- makeRow: no UIListLayout on the row, so hitBg Size 1,1 is safe.
+                    local row, left, right = makeRow(o.Title or "Dropdown", o.Desc, o.Icon or o.Image)
+                    left.Size = UDim2.new(1, -176, 0, 0)
+                    right.Size = UDim2.fromOffset(168, 30)
 
                     local box = mk("TextButton", {
                         BackgroundColor3 = T.BgInput,
                         AutoButtonColor = false,
                         Text = "",
-                        Size = UDim2.new(1, 0, 0, 34),
-                        Parent = body,
+                        Size = UDim2.fromScale(1, 1),
+                        Parent = right,
                     })
                     corner(box, rCtrl)
                     stroke(box, T.Stroke, 1, 0.28)
@@ -3326,6 +3285,35 @@ function VoidUI:CreateWindow(cfg)
                         return T.Text
                     end
 
+                    local function isIdleValue(v)
+                        local s = string.lower((tostring(v or ""):gsub("^%s+", ""):gsub("%s+$", "")))
+                        return s == "" or s == "-" or s == "—" or s == "off" or s == "idle" or s == "n/a" or s == "none"
+                    end
+
+                    local function pickStatValueColor(v, tone)
+                        if tone ~= nil and tostring(tone) ~= "" then
+                            local _, key = toneColor(tone)
+                            if key ~= "mute" then
+                                return valueColor(tone)
+                            end
+                        end
+                        if isIdleValue(v) then
+                            return T.TextMute
+                        end
+                        return T.Text
+                    end
+
+                    local function statusSubColor(v)
+                        local s = string.lower(tostring(v or ""))
+                        if s:find("fight", 1, true) or s == "on" or s == "live" or s == "running" or s == "in match" then
+                            return T.Success
+                        end
+                        if isIdleValue(v) then
+                            return T.TextMute
+                        end
+                        return T.TextDim
+                    end
+
                     local function makeBadge(parent, tag, tone)
                         local label, bg, fg, key = badgePaint(tag, tone)
                         local w = math.clamp(#label * 7 + 16, 48, 76)
@@ -3379,40 +3367,41 @@ function VoidUI:CreateWindow(cfg)
                     local function makeHeadRow(data, order)
                         local row = mk("Frame", {
                             BackgroundTransparency = 1,
-                            Size = UDim2.new(1, 0, 0, 32),
+                            Size = UDim2.new(1, 0, 0, 22),
                             LayoutOrder = order,
                             Parent = board,
                         })
                         local x = 0
                         if data.Icon then
-                            local ih = makeIcon(row, data.Icon, 16, T.Text, 2)
-                            ih.Position = UDim2.fromOffset(0, 8)
-                            x = 22
+                            local ih = makeIcon(row, data.Icon, 14, T.TextDim, 2)
+                            ih.Position = UDim2.fromOffset(0, 4)
+                            x = 20
                         end
-                        crisp(mk("TextLabel", {
+                        mk("TextLabel", {
                             Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
-                            TextSize = 15,
+                            TextSize = 14,
                             TextColor3 = T.Text,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             Text = tostring(data.Label or data.Text or "Live"),
                             Position = UDim2.fromOffset(x, 0),
-                            Size = UDim2.new(1, -x, 0, 18),
+                            Size = UDim2.new(1, -(x + 88), 1, 0),
                             Parent = row,
-                        }), 0.7)
+                        })
                         mk("TextLabel", {
                             Name = "Value",
                             BackgroundTransparency = 1,
                             Font = Fonts.Body,
                             TextSize = 12,
-                            TextColor3 = T.TextDim,
-                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextColor3 = statusSubColor(data.Value or data.Sub),
+                            TextXAlignment = Enum.TextXAlignment.Right,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             Text = tostring(data.Value or data.Sub or ""),
-                            Position = UDim2.fromOffset(x, 16),
-                            Size = UDim2.new(1, -x, 0, 14),
+                            AnchorPoint = Vector2.new(1, 0),
+                            Position = UDim2.new(1, 0, 0, 0),
+                            Size = UDim2.new(0, 84, 1, 0),
                             Parent = row,
                         })
                         return row
@@ -3421,17 +3410,17 @@ function VoidUI:CreateWindow(cfg)
                     local function makeStatRow(data, order)
                         local row = mk("Frame", {
                             BackgroundTransparency = 1,
-                            Size = UDim2.new(1, 0, 0, 26),
+                            Size = UDim2.new(1, 0, 0, 24),
                             LayoutOrder = order,
                             Parent = board,
                         })
                         local x = 0
                         local iconImg
                         if data.Icon then
-                            local ih, img = makeIcon(row, data.Icon, 15, T.Text, 2)
+                            local ih, img = makeIcon(row, data.Icon, 14, T.TextMute, 2)
                             ih.Position = UDim2.fromOffset(0, 5)
                             iconImg = img
-                            x = 22
+                            x = 20
                         end
                         mk("TextLabel", {
                             Name = "Label",
@@ -3443,23 +3432,23 @@ function VoidUI:CreateWindow(cfg)
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             Text = tostring(data.Label or ""),
                             Position = UDim2.fromOffset(x, 0),
-                            Size = UDim2.new(1, -(x + 100), 1, 0),
+                            Size = UDim2.new(1, -(x + 108), 1, 0),
                             Parent = row,
                         })
-                        local valueLbl = crisp(mk("TextLabel", {
+                        local valueLbl = mk("TextLabel", {
                             Name = "Value",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
-                            TextSize = 14,
-                            TextColor3 = valueColor(data.Tone),
+                            TextSize = 13,
+                            TextColor3 = pickStatValueColor(data.Value, data.Tone),
                             TextXAlignment = Enum.TextXAlignment.Right,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             Text = tostring(data.Value or ""),
                             AnchorPoint = Vector2.new(1, 0),
                             Position = UDim2.new(1, 0, 0, 0),
-                            Size = UDim2.new(0, 120, 1, 0),
+                            Size = UDim2.new(0, 128, 1, 0),
                             Parent = row,
-                        }), 0.7)
+                        })
                         local key = string.lower(tostring(data.Label or data.Id or ""))
                         if key ~= "" then
                             statIndex[key] = { Value = valueLbl, Icon = iconImg, Data = data }
@@ -3470,21 +3459,29 @@ function VoidUI:CreateWindow(cfg)
                     local function makeSepRow(data, order)
                         local row = mk("Frame", {
                             BackgroundTransparency = 1,
-                            Size = UDim2.new(1, 0, 0, 18),
+                            Size = UDim2.new(1, 0, 0, 16),
                             LayoutOrder = order,
                             Parent = board,
                         })
-                        crisp(mk("TextLabel", {
+                        mk("Frame", {
+                            BackgroundColor3 = T.Divider,
+                            BorderSizePixel = 0,
+                            Size = UDim2.new(1, 0, 0, 1),
+                            Position = UDim2.fromOffset(0, 2),
+                            Parent = row,
+                        })
+                        mk("TextLabel", {
                             Name = "Label",
                             BackgroundTransparency = 1,
                             Font = Fonts.Title,
                             TextSize = 11,
-                            TextColor3 = T.TextDim,
+                            TextColor3 = T.TextMute,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             Text = string.upper(tostring(data.Text or data.Label or data.Title or "")),
-                            Size = UDim2.new(1, 0, 1, 0),
+                            Position = UDim2.fromOffset(0, 4),
+                            Size = UDim2.new(1, 0, 0, 12),
                             Parent = row,
-                        }), 0.8)
+                        })
                         return row
                     end
 
@@ -3712,10 +3709,10 @@ function VoidUI:CreateWindow(cfg)
                         end
                         if kind == "head" or kind == "live" then
                             setNamed(frame, "Label", data.Label or data.Text)
-                            setNamed(frame, "Value", data.Value or data.Sub)
+                            setNamed(frame, "Value", data.Value or data.Sub, statusSubColor(data.Value or data.Sub))
                         elseif kind == "stat" or kind == "kv" then
                             setNamed(frame, "Label", data.Label)
-                            setNamed(frame, "Value", data.Value, valueColor(data.Tone))
+                            setNamed(frame, "Value", data.Value, pickStatValueColor(data.Value, data.Tone))
                             local key = string.lower(tostring(data.Label or data.Id or ""))
                             if key ~= "" and statIndex[key] then
                                 statIndex[key].Data = data
@@ -3920,10 +3917,11 @@ function VoidUI:CreateWindow(cfg)
                             return false
                         end
                         rec.Value.Text = tostring(value or "")
-                        if tone ~= nil then
-                            rec.Value.TextColor3 = valueColor(tone)
-                        end
+                        rec.Value.TextColor3 = pickStatValueColor(value, tone)
                         rec.Data.Value = tostring(value or "")
+                        if tone ~= nil then
+                            rec.Data.Tone = tone
+                        end
                         return true
                     end
 
